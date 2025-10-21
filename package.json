@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "remix dev",
     "build": "remix build",
-    "start": "node server.js",
+    "start": "node server-debug.js",
+    "start:prod": "node server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "test": "jest",
