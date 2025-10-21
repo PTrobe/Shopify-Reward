@@ -8,9 +8,26 @@ import { MemorySessionStorage } from "@shopify/shopify-app-session-storage-memor
 import { restResources } from "@shopify/shopify-api/rest/admin/2024-01";
 import { prisma } from "./lib/prisma.server";
 
+// Environment validation and defaults
+const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY || "development_key";
+const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "development_secret";
+const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL ||
+  process.env.RAILWAY_STATIC_URL ||
+  process.env.RAILWAY_PUBLIC_DOMAIN ||
+  "https://localhost:3000";
+
+// Ensure the URL has proper protocol
+const normalizedAppUrl = SHOPIFY_APP_URL.startsWith('http') ?
+  SHOPIFY_APP_URL :
+  `https://${SHOPIFY_APP_URL}`;
+
+console.log("Shopify App Configuration:");
+console.log("- API Key:", SHOPIFY_API_KEY.substring(0, 8) + "...");
+console.log("- App URL:", normalizedAppUrl);
+
 const shopify = shopifyApp({
-  apiKey: process.env.SHOPIFY_API_KEY!,
-  apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
+  apiKey: SHOPIFY_API_KEY,
+  apiSecretKey: SHOPIFY_API_SECRET,
   apiVersion: ApiVersion.January24,
   scopes: process.env.SHOPIFY_SCOPES?.split(",") || [
     "read_products",
@@ -20,7 +37,7 @@ const shopify = shopifyApp({
     "read_orders",
     "write_orders"
   ],
-  appUrl: process.env.SHOPIFY_APP_URL || "",
+  appUrl: normalizedAppUrl,
   authPathPrefix: "/auth",
   sessionStorage: new MemorySessionStorage(),
   distribution: AppDistribution.AppStore,
