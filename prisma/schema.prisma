@@ -131,6 +131,9 @@ model Customer {
   @@index([email])
   @@index([referralCode])
   @@index([shopId, pointsBalance])
+  @@index([shopId, lifetimePoints])
+  @@index([shopId, lastActivityAt])
+  @@index([currentTierId])
   @@map("customers")
 }
 
@@ -159,8 +162,11 @@ model Transaction {
   expiresAt         DateTime?
 
   @@index([customerId, createdAt])
+  @@index([shopId, createdAt])
   @@index([shopifyOrderId])
   @@index([type])
+  @@index([shopId, type, createdAt])
+  @@index([source])
   @@map("transactions")
 }
 

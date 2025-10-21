@@ -1,4 +1,7 @@
 import { prisma } from "../lib/prisma.server";
+import { cache, CacheKeys, CacheTTL } from "../lib/cache.server";
+import { validateRequestBody, earnPointsSchema, redeemPointsSchema, adjustPointsSchema } from "../lib/validation";
+import { LoyaltyAppError, InsufficientPointsError, NotFoundError } from "../lib/errors";
 import type {
   Customer,
   Transaction,
@@ -30,6 +33,9 @@ export class LoyaltyService {
    * Award points to a customer
    */
   async earnPoints(params: EarnPointsParams): Promise<Transaction> {
+    // Validate input parameters
+    const validatedParams = validateRequestBody(earnPointsSchema, params);
+
     const {
       shopId,
       customerId,
@@ -39,11 +45,7 @@ export class LoyaltyService {
       shopifyOrderId,
       shopifyOrderNumber,
       metadata
-    } = params;
-
-    if (points <= 0) {
-      throw new Error("Points must be positive");
-    }
+    } = validatedParams;
 
     // Use transaction to ensure consistency
     return await prisma.$transaction(async (tx) => {
