@@ -1,0 +1,18 @@
+{
+  "name": "loyco-checkout-extension",
+  "version": "1.0.0",
+  "description": "Loyco Loyalty Checkout UI Extension",
+  "main": "src/Checkout.jsx",
+  "scripts": {
+    "build": "shopify app build",
+    "dev": "shopify app dev"
+  },
+  "dependencies": {
+    "@shopify/ui-extensions": "^2024.10.0",
+    "@shopify/ui-extensions-react": "^2024.10.0",
+    "react": "^18.0.0"
+  },
+  "devDependencies": {
+    "@shopify/cli": "^3.85.0"
+  }
+}

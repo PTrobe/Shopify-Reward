@@ -1,0 +1,28 @@
+api_version = "2024-10"
+
+[[extensions]]
+type = "customer_account_ui_extension"
+name = "Loyco Loyalty Account"
+handle = "loyco-customer-account"
+
+[extensions.capabilities]
+network_access = true
+
+[extensions.settings]
+[[extensions.settings.fields]]
+key = "primary_color"
+type = "single_line_text_field"
+name = "Primary Color"
+description = "Hex color code for loyalty elements"
+
+[[extensions.settings.fields]]
+key = "show_transaction_history"
+type = "boolean"
+name = "Show Transaction History"
+description = "Display recent loyalty transactions"
+
+[[extensions.settings.fields]]
+key = "transactions_limit"
+type = "number_integer"
+name = "Transaction History Limit"
+description = "Number of recent transactions to show"

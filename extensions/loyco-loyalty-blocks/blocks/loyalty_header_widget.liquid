@@ -1,0 +1,520 @@
+{% comment %}
+  Loyalty Header Widget
+  A compact widget for the header/navigation showing points balance and quick access
+{% endcomment %}
+
+<div class="loyco-header-widget"
+     data-shop="{{ shop.permanent_domain }}"
+     {% if customer %}data-customer-id="{{ customer.id }}"{% endif %}>
+
+  <!-- Guest State -->
+  {% unless customer %}
+    <div class="loyco-guest-widget">
+      <a href="/account/register" class="loyco-join-link">
+        <span class="loyco-widget-icon">🎁</span>
+        <span class="loyco-widget-text">Join Rewards</span>
+      </a>
+    </div>
+  {% endunless %}
+
+  <!-- Customer State -->
+  {% if customer %}
+    <div class="loyco-customer-widget">
+      <div class="loyco-widget-loading">
+        <div class="loyco-mini-spinner"></div>
+      </div>
+
+      <div class="loyco-widget-content" style="display: none;">
+        <button class="loyco-points-summary" data-toggle-dropdown>
+          <span class="loyco-widget-icon">🎁</span>
+          <span class="loyco-points-display">
+            <span class="loyco-points-value" data-points>0</span>
+            <span class="loyco-points-label" data-points-name>pts</span>
+          </span>
+          <span class="loyco-dropdown-arrow">▼</span>
+        </button>
+
+        <div class="loyco-dropdown" data-dropdown style="display: none;">
+          <div class="loyco-dropdown-header">
+            <h4>Your Loyalty Status</h4>
+          </div>
+
+          <div class="loyco-dropdown-body">
+            <div class="loyco-points-detail">
+              <div class="loyco-points-row">
+                <span>Current Balance:</span>
+                <strong><span data-points>0</span> <span data-points-name>points</span></strong>
+              </div>
+              <div class="loyco-points-row">
+                <span>Lifetime Points:</span>
+                <strong><span data-lifetime-points>0</span></strong>
+              </div>
+            </div>
+
+            <div class="loyco-tier-info" data-tier-info style="display: none;">
+              <div class="loyco-tier-current">
+                <span class="loyco-tier-badge" data-tier-badge>
+                  <span data-tier-icon></span>
+                  <span data-tier-name></span>
+                </span>
+              </div>
+              <div class="loyco-tier-progress" data-tier-progress style="display: none;">
+                <div class="loyco-progress-text">
+                  <span data-points-to-next>0</span> points to next tier
+                </div>
+                <div class="loyco-progress-bar-mini">
+                  <div class="loyco-progress-fill-mini" data-progress-fill></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="loyco-quick-rewards" data-quick-rewards style="display: none;">
+              <h5>Quick Rewards</h5>
+              <div class="loyco-rewards-mini"></div>
+            </div>
+          </div>
+
+          <div class="loyco-dropdown-footer">
+            <a href="/account" class="loyco-view-all-btn">View All Rewards</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="loyco-widget-error" style="display: none;">
+        <span class="loyco-widget-icon">⚠️</span>
+        <span class="loyco-error-text">Error loading rewards</span>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const headerWidget = document.querySelector('.loyco-header-widget');
+    if (!headerWidget) return;
+
+    const customerId = headerWidget.dataset.customerId;
+    const shop = headerWidget.dataset.shop;
+
+    if (!customerId || !shop) return;
+
+    initHeaderWidget(headerWidget, customerId, shop);
+  });
+
+  function initHeaderWidget(widget, customerId, shop) {
+    loadHeaderWidgetData(widget, customerId, shop);
+    setupDropdown(widget);
+
+    // Listen for global loyalty updates
+    document.addEventListener('loycoCustomerLoaded', function(event) {
+      updateHeaderWidget(widget, event.detail);
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      if (!widget.contains(event.target)) {
+        closeDropdown(widget);
+      }
+    });
+  }
+
+  function loadHeaderWidgetData(widget, customerId, shop) {
+    const loadingEl = widget.querySelector('.loyco-widget-loading');
+    const contentEl = widget.querySelector('.loyco-widget-content');
+    const errorEl = widget.querySelector('.loyco-widget-error');
+
+    loadingEl.style.display = 'block';
+    contentEl.style.display = 'none';
+    errorEl.style.display = 'none';
+
+    const proxyUrl = `/apps/loyco-rewards/api/customer/${customerId}/status?shop=${shop}&timestamp=${Date.now()}&signature=temp`;
+
+    fetch(proxyUrl)
+      .then(response => response.json())
+      .then(data => {
+        loadingEl.style.display = 'none';
+
+        if (data.enrolled) {
+          updateHeaderWidget(widget, data);
+          contentEl.style.display = 'block';
+        } else {
+          errorEl.style.display = 'block';
+        }
+      })
+      .catch(error => {
+        console.error('Failed to load header widget data:', error);
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+      });
+  }
+
+  function updateHeaderWidget(widget, data) {
+    // Update points display
+    const pointsElements = widget.querySelectorAll('[data-points]');
+    const pointsNameElements = widget.querySelectorAll('[data-points-name]');
+    const lifetimePointsEl = widget.querySelector('[data-lifetime-points]');
+
+    pointsElements.forEach(el => {
+      el.textContent = data.customer.pointsBalance.toLocaleString();
+    });
+
+    pointsNameElements.forEach(el => {
+      el.textContent = data.program.pointsName || 'points';
+    });
+
+    if (lifetimePointsEl) {
+      lifetimePointsEl.textContent = data.customer.lifetimePoints.toLocaleString();
+    }
+
+    // Update tier information
+    if (data.tier) {
+      const tierInfo = widget.querySelector('[data-tier-info]');
+      const tierBadge = widget.querySelector('[data-tier-badge]');
+      const tierName = widget.querySelector('[data-tier-name]');
+      const tierIcon = widget.querySelector('[data-tier-icon]');
+
+      if (tierInfo) tierInfo.style.display = 'block';
+      if (tierName) tierName.textContent = data.tier.name;
+      if (tierIcon) tierIcon.textContent = data.tier.icon || '⭐';
+      if (tierBadge) {
+        tierBadge.style.setProperty('--tier-color', data.tier.color);
+      }
+
+      // Update progress to next tier
+      if (data.nextTier) {
+        const progressContainer = widget.querySelector('[data-tier-progress]');
+        const pointsToNext = widget.querySelector('[data-points-to-next]');
+        const progressFill = widget.querySelector('[data-progress-fill]');
+
+        if (progressContainer) progressContainer.style.display = 'block';
+        if (pointsToNext) pointsToNext.textContent = data.nextTier.pointsNeeded.toLocaleString();
+
+        if (progressFill) {
+          const progressPercent = ((data.customer.lifetimePoints / data.nextTier.requiredPoints) * 100);
+          progressFill.style.width = Math.min(progressPercent, 100) + '%';
+        }
+      }
+    }
+
+    // Update quick rewards
+    if (data.availableRewards && data.availableRewards.length > 0) {
+      const quickRewards = widget.querySelector('[data-quick-rewards]');
+      const rewardsMini = widget.querySelector('.loyco-rewards-mini');
+
+      if (quickRewards && rewardsMini) {
+        const topRewards = data.availableRewards.slice(0, 3);
+        rewardsMini.innerHTML = topRewards.map(reward => `
+          <div class="loyco-reward-mini">
+            <span class="loyco-reward-mini-name">${reward.name}</span>
+            <span class="loyco-reward-mini-cost">${reward.pointsCost.toLocaleString()} pts</span>
+          </div>
+        `).join('');
+
+        quickRewards.style.display = 'block';
+      }
+    }
+  }
+
+  function setupDropdown(widget) {
+    const toggleBtn = widget.querySelector('[data-toggle-dropdown]');
+    const dropdown = widget.querySelector('[data-dropdown]');
+
+    if (!toggleBtn || !dropdown) return;
+
+    toggleBtn.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const isVisible = dropdown.style.display !== 'none';
+      if (isVisible) {
+        closeDropdown(widget);
+      } else {
+        openDropdown(widget);
+      }
+    });
+  }
+
+  function openDropdown(widget) {
+    const dropdown = widget.querySelector('[data-dropdown]');
+    const arrow = widget.querySelector('.loyco-dropdown-arrow');
+
+    if (dropdown) {
+      dropdown.style.display = 'block';
+      dropdown.classList.add('loyco-dropdown-open');
+    }
+
+    if (arrow) {
+      arrow.textContent = '▲';
+    }
+  }
+
+  function closeDropdown(widget) {
+    const dropdown = widget.querySelector('[data-dropdown]');
+    const arrow = widget.querySelector('.loyco-dropdown-arrow');
+
+    if (dropdown) {
+      dropdown.style.display = 'none';
+      dropdown.classList.remove('loyco-dropdown-open');
+    }
+
+    if (arrow) {
+      arrow.textContent = '▼';
+    }
+  }
+</script>
+
+<style>
+  .loyco-header-widget {
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  .loyco-guest-widget .loyco-join-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    color: #374151;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+
+  .loyco-guest-widget .loyco-join-link:hover {
+    background: #e5e7eb;
+  }
+
+  .loyco-customer-widget {
+    position: relative;
+  }
+
+  .loyco-widget-loading {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+  }
+
+  .loyco-mini-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #6366f1;
+    border-radius: 50%;
+    animation: loyco-spin 1s linear infinite;
+  }
+
+  .loyco-points-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .loyco-points-summary:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .loyco-widget-icon {
+    font-size: 1rem;
+  }
+
+  .loyco-points-display {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+
+  .loyco-points-value {
+    font-weight: 600;
+    color: #6366f1;
+  }
+
+  .loyco-points-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .loyco-dropdown-arrow {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    transition: transform 0.2s;
+  }
+
+  .loyco-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 300px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    margin-top: 4px;
+  }
+
+  .loyco-dropdown-header {
+    padding: 16px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .loyco-dropdown-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .loyco-dropdown-body {
+    padding: 16px;
+  }
+
+  .loyco-points-detail {
+    margin-bottom: 16px;
+  }
+
+  .loyco-points-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+  }
+
+  .loyco-points-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .loyco-tier-info {
+    margin-bottom: 16px;
+  }
+
+  .loyco-tier-current {
+    margin-bottom: 12px;
+  }
+
+  .loyco-tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--tier-color, #f3f4f6);
+    color: #1f2937;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .loyco-tier-progress {
+    margin-top: 8px;
+  }
+
+  .loyco-progress-text {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 4px;
+  }
+
+  .loyco-progress-bar-mini {
+    height: 4px;
+    background: #f3f4f6;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .loyco-progress-fill-mini {
+    height: 100%;
+    background: #6366f1;
+    transition: width 0.3s ease;
+  }
+
+  .loyco-quick-rewards h5 {
+    margin: 0 0 12px 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .loyco-reward-mini {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.75rem;
+  }
+
+  .loyco-reward-mini:last-child {
+    border-bottom: none;
+  }
+
+  .loyco-reward-mini-name {
+    color: #374151;
+  }
+
+  .loyco-reward-mini-cost {
+    color: #6366f1;
+    font-weight: 500;
+  }
+
+  .loyco-dropdown-footer {
+    padding: 16px;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  .loyco-view-all-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 8px 16px;
+    background: #f9fafb;
+    color: #374151;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+
+  .loyco-view-all-btn:hover {
+    background: #f3f4f6;
+  }
+
+  .loyco-widget-error {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    color: #dc2626;
+    font-size: 0.875rem;
+  }
+
+  @keyframes loyco-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .loyco-dropdown {
+      right: -16px;
+      left: -16px;
+      width: auto;
+    }
+
+    .loyco-points-summary {
+      padding: 6px 10px;
+      font-size: 0.8125rem;
+    }
+  }
+</style>

@@ -1,0 +1,58 @@
+{
+  "loyco": {
+    "customer_status": {
+      "heading": "Your Loyalty Status",
+      "loading": "Loading your loyalty status...",
+      "points_balance": "Points Balance",
+      "current_tier": "Current Tier",
+      "points_to_next": "points to next tier",
+      "enroll_prompt": "Join our loyalty program to start earning points!",
+      "enroll_button": "Join Now",
+      "error": "Unable to load loyalty status. Please try again later."
+    },
+    "product_points": {
+      "earn_text": "Earn {points} points with this purchase",
+      "tier_bonus": "+{bonus} tier bonus"
+    },
+    "rewards": {
+      "heading": "Available Rewards",
+      "loading": "Loading available rewards...",
+      "no_rewards": "No rewards available yet",
+      "keep_earning": "Keep earning points to unlock amazing rewards!",
+      "redeem": "Redeem",
+      "not_enough_points": "Not enough points",
+      "points_required": "points required",
+      "redeem_success": "Reward redeemed successfully!",
+      "redeem_error": "Failed to redeem reward. Please try again.",
+      "modal": {
+        "title": "Redeem Reward",
+        "cancel": "Cancel",
+        "confirm": "Redeem Now",
+        "redeeming": "Redeeming..."
+      }
+    },
+    "header_widget": {
+      "join_rewards": "Join Rewards",
+      "your_status": "Your Loyalty Status",
+      "current_balance": "Current Balance",
+      "lifetime_points": "Lifetime Points",
+      "quick_rewards": "Quick Rewards",
+      "view_all": "View All Rewards",
+      "error_loading": "Error loading rewards"
+    },
+    "notifications": {
+      "points_earned": "You earned {points} points!",
+      "reward_redeemed": "Reward redeemed! Code: {code}",
+      "welcome": "Welcome to our loyalty program!",
+      "error_general": "Something went wrong. Please try again."
+    },
+    "common": {
+      "points": "points",
+      "loading": "Loading...",
+      "error": "Error",
+      "close": "Close",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    }
+  }
+}

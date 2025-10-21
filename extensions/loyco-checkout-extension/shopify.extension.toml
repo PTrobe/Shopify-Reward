@@ -1,0 +1,41 @@
+api_version = "2024-10"
+
+[[extensions]]
+type = "checkout_ui_extension"
+name = "Loyco Loyalty Checkout"
+handle = "loyco-checkout-loyalty"
+
+[extensions.capabilities]
+network_access = true
+block_progress = false
+
+[extensions.settings]
+[[extensions.settings.fields]]
+key = "show_points_earned"
+type = "boolean"
+name = "Show Points Earned"
+description = "Display how many points the customer will earn from this order"
+
+[[extensions.settings.fields]]
+key = "show_tier_progress"
+type = "boolean"
+name = "Show Tier Progress"
+description = "Show progress towards next loyalty tier"
+
+[[extensions.settings.fields]]
+key = "show_available_rewards"
+type = "boolean"
+name = "Show Available Rewards"
+description = "Display rewards the customer can redeem"
+
+[[extensions.settings.fields]]
+key = "primary_color"
+type = "single_line_text_field"
+name = "Primary Color"
+description = "Hex color code for the loyalty elements"
+
+[[extensions.settings.fields]]
+key = "welcome_message"
+type = "single_line_text_field"
+name = "Welcome Message"
+description = "Message for new customers to join loyalty program"
