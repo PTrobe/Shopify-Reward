@@ -1,11 +1,12 @@
 {
   "name": "loyco-rewards",
   "version": "1.0.0",
+  "type": "module",
   "description": "Shopify app for loyalty rewards",
   "scripts": {
     "dev": "remix dev",
     "build": "remix build",
-    "start": "remix start",
+    "start": "node server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "test": "jest"
@@ -23,6 +24,7 @@
     "@shopify/polaris": "^12.0.0",
     "@shopify/polaris-icons": "^7.0.0",
     "@shopify/shopify-app-remix": "^2.0.0",
+    "@shopify/shopify-app-session-storage-memory": "^5.0.0",
     "bcryptjs": "^2.4.0",
     "crypto-js": "^4.2.0",
     "date-fns": "^2.30.0",

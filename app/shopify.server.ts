@@ -4,7 +4,7 @@ import {
   AppDistribution,
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
-import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
+import { MemorySessionStorage } from "@shopify/shopify-app-session-storage-memory";
 import { restResources } from "@shopify/shopify-api/rest/admin/2024-01";
 import { prisma } from "./lib/prisma.server";
 
@@ -22,7 +22,7 @@ const shopify = shopifyApp({
   ],
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma),
+  sessionStorage: new MemorySessionStorage(),
   distribution: AppDistribution.AppStore,
   restResources,
   webhooks: {
