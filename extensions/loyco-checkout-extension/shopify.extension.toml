@@ -1,41 +1,52 @@
-api_version = "2024-10"
+# Learn more about configuring your checkout UI extension:
+# https://shopify.dev/docs/api/checkout-ui-extensions/latest/configuration
+
+# The version of APIs your extension will receive. Learn more:
+# https://shopify.dev/docs/api/usage/versioning
+api_version = "2025-10"
 
 [[extensions]]
-type = "checkout_ui_extension"
-name = "Loyco Loyalty Checkout"
-handle = "loyco-checkout-loyalty"
+name = "Loyco Checkout Extension"
+handle = "loyco-checkout-extension"
+type = "ui_extension"
+uid = "1006458e-f33f-8ff0-679d-e44a048df011dda13eb6"
+
+# Controls where in Shopify your extension will be injected,
+# and the file that contains your extension’s source code. Learn more:
+# https://shopify.dev/docs/api/checkout-ui-extensions/latest/extension-targets-overview
+
+[[extensions.targeting]]
+module = "./src/Checkout.jsx"
+target = "purchase.checkout.block.render"
 
 [extensions.capabilities]
-network_access = true
-block_progress = false
+# Gives your extension access to directly query Shopify’s storefront API.
+# https://shopify.dev/docs/api/checkout-ui-extensions/latest/configuration#api-access
+api_access = true
 
-[extensions.settings]
-[[extensions.settings.fields]]
-key = "show_points_earned"
-type = "boolean"
-name = "Show Points Earned"
-description = "Display how many points the customer will earn from this order"
+# Gives your extension access to make external network calls, using the
+# JavaScript `fetch()` API. Learn more:
+# https://shopify.dev/docs/api/checkout-ui-extensions/latest/configuration#network-access
+# network_access = true
 
-[[extensions.settings.fields]]
-key = "show_tier_progress"
-type = "boolean"
-name = "Show Tier Progress"
-description = "Show progress towards next loyalty tier"
+# Loads metafields on checkout resources, including the cart,
+# products, customers, and more. Learn more:
+# https://shopify.dev/docs/api/checkout-ui-extensions/latest/configuration#metafields
 
-[[extensions.settings.fields]]
-key = "show_available_rewards"
-type = "boolean"
-name = "Show Available Rewards"
-description = "Display rewards the customer can redeem"
+# [[extensions.metafields]]
+# namespace = "my_namespace"
+# key = "my_key"
+# [[extensions.metafields]]
+# namespace = "my_namespace"
+# key = "my_other_key"
 
-[[extensions.settings.fields]]
-key = "primary_color"
-type = "single_line_text_field"
-name = "Primary Color"
-description = "Hex color code for the loyalty elements"
+# Defines settings that will be collected from merchants installing
+# your extension. Learn more:
+# https://shopify.dev/docs/api/checkout-ui-extensions/latest/configuration#settings-definition
 
-[[extensions.settings.fields]]
-key = "welcome_message"
-type = "single_line_text_field"
-name = "Welcome Message"
-description = "Message for new customers to join loyalty program"
+# [extensions.settings]
+# [[extensions.settings.fields]]
+# key = "banner_title"
+# type = "single_line_text_field"
+# name = "Banner title"
+# description = "Enter a title for the banner"
