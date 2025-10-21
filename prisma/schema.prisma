@@ -272,6 +272,7 @@ model WebhookEvent {
   payload     Json
   processed   Boolean  @default(false)
   processingError String?
+  metadata    Json?    // For retry counts and other metadata
 
   createdAt   DateTime @default(now())
   processedAt DateTime?
