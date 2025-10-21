@@ -5,6 +5,8 @@ import {
   writeReadableStreamToWritable,
 } from "@remix-run/node";
 import { createServer } from "http";
+import { readFileSync, existsSync } from "fs";
+import { join, extname } from "path";
 
 // Import the server build with error handling
 let build;
@@ -38,6 +40,31 @@ console.log(`Starting server on port ${port}`);
 
 const server = createServer(async (request, response) => {
   try {
+    // Handle static files from build directory
+    if (request.url?.startsWith('/build/')) {
+      const filePath = join(process.cwd(), request.url);
+      if (existsSync(filePath)) {
+        const ext = extname(filePath);
+        const mimeTypes = {
+          '.js': 'application/javascript',
+          '.css': 'text/css',
+          '.map': 'application/json',
+          '.txt': 'text/plain',
+        };
+
+        response.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+        response.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year cache
+
+        const fileContent = readFileSync(filePath);
+        response.end(fileContent);
+        return;
+      } else {
+        response.statusCode = 404;
+        response.end('File not found');
+        return;
+      }
+    }
+
     const remixRequest = createRemixRequest(request, port);
     const remixResponse = await handleRequest(remixRequest);
     await sendRemixResponse(response, remixResponse);
