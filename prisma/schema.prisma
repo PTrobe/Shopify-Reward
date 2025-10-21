@@ -1,0 +1,171 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id          String   @id
+  shop        String
+  state       String
+  isOnline    Boolean  @default(false)
+  scope       String?
+  expires     DateTime?
+  accessToken String
+  userId      BigInt?
+  firstName   String?
+  lastName    String?
+  email       String?
+  accountOwner Boolean @default(false)
+  locale      String?
+  collaborator Boolean? @default(false)
+  emailVerified Boolean? @default(false)
+}
+
+model Shop {
+  id          String   @id @default(cuid())
+  domain      String   @unique
+  name        String
+  email       String?
+  currency    String   @default("USD")
+  timezone    String?
+  plan        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Loyalty program settings
+  loyaltyPrograms LoyaltyProgram[]
+  customers       Customer[]
+  rewards         Reward[]
+
+  @@map("shops")
+}
+
+model LoyaltyProgram {
+  id          String   @id @default(cuid())
+  shopId      String
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  pointsPerDollar Int  @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  tiers       Tier[]
+  rules       Rule[]
+
+  @@map("loyalty_programs")
+}
+
+model Customer {
+  id              String   @id @default(cuid())
+  shopId          String
+  shopifyCustomerId BigInt @unique
+  email           String
+  firstName       String?
+  lastName        String?
+  totalPoints     Int      @default(0)
+  totalSpent      Decimal  @default(0)
+  tierId          String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  tier            Tier?    @relation(fields: [tierId], references: [id])
+  pointTransactions PointTransaction[]
+  rewardRedemptions RewardRedemption[]
+
+  @@map("customers")
+}
+
+model Tier {
+  id          String   @id @default(cuid())
+  programId   String
+  name        String
+  minPoints   Int
+  benefits    String[] @default([])
+  color       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  program     LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  customers   Customer[]
+
+  @@map("tiers")
+}
+
+model Rule {
+  id          String   @id @default(cuid())
+  programId   String
+  type        String   // purchase, signup, birthday, review, referral
+  name        String
+  description String?
+  points      Int
+  conditions  Json?    // Store conditions as JSON
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  program     LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@map("rules")
+}
+
+model Reward {
+  id          String   @id @default(cuid())
+  shopId      String
+  name        String
+  description String?
+  type        String   // discount, free_product, free_shipping
+  value       Decimal  // Amount or percentage
+  costInPoints Int
+  isActive    Boolean  @default(true)
+  validUntil  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  redemptions RewardRedemption[]
+
+  @@map("rewards")
+}
+
+model PointTransaction {
+  id          String   @id @default(cuid())
+  customerId  String
+  points      Int      // Can be negative for redemptions
+  type        String   // earned, redeemed, expired, adjusted
+  description String?
+  orderId     String?  // Reference to Shopify order if applicable
+  createdAt   DateTime @default(now())
+
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("point_transactions")
+}
+
+model RewardRedemption {
+  id          String   @id @default(cuid())
+  customerId  String
+  rewardId    String
+  pointsUsed  Int
+  discountCode String?
+  status      String   @default("pending") // pending, used, expired
+  usedAt      DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reward      Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@map("reward_redemptions")
+}
