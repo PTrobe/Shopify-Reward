@@ -22,6 +22,78 @@ export interface UpdateCustomerParams {
 
 export class CustomerService {
   /**
+   * Enroll a customer in the loyalty program
+   */
+  async enrollCustomer(params: {
+    shopId: string;
+    shopifyCustomerId: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    birthday?: string;
+    referralCode?: string;
+  }): Promise<Customer> {
+    const {
+      shopId,
+      shopifyCustomerId,
+      email,
+      firstName,
+      lastName,
+      phone,
+      birthday,
+      referralCode
+    } = params;
+
+    // Generate unique referral code for the new customer
+    const newReferralCode = nanoid(8).toUpperCase();
+
+    // Get the starting tier (lowest level tier)
+    const loyaltyProgram = await prisma.loyaltyProgram.findUnique({
+      where: { shopId },
+      include: {
+        tiers: {
+          orderBy: { requiredPoints: 'asc' },
+          take: 1
+        }
+      }
+    });
+
+    const startingTier = loyaltyProgram?.tiers[0] || null;
+
+    const customer = await prisma.customer.create({
+      data: {
+        shopId,
+        shopifyCustomerId,
+        email,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        phone: phone || null,
+        birthday: birthday ? new Date(birthday) : null,
+        referralCode: newReferralCode,
+        currentTierId: startingTier?.id,
+        enrolledAt: new Date(),
+        lastActivityAt: new Date(),
+      },
+      include: {
+        currentTier: true,
+        shop: {
+          include: {
+            loyaltyProgram: true
+          }
+        }
+      }
+    });
+
+    // Process referral if provided
+    if (referralCode) {
+      await this.processReferral(referralCode, customer.id);
+    }
+
+    return customer;
+  }
+
+  /**
    * Create or update customer from Shopify data
    */
   async upsertCustomer(params: CreateCustomerParams): Promise<Customer> {

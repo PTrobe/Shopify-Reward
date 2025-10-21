@@ -26,8 +26,12 @@ export const earnPointsSchema = z.object({
   points: z.number().int().positive(),
   source: z.string().min(1),
   description: z.string().min(1),
+  activityType: z.string().min(1),
   shopifyOrderId: z.string().optional(),
   shopifyOrderNumber: z.string().optional(),
+  orderId: z.string().optional(),
+  orderNumber: z.string().optional(),
+  orderValue: z.number().optional(),
   metadata: z.record(z.any()).optional(),
 });
 
@@ -55,6 +59,17 @@ export const redeemRewardSchema = z.object({
   customerId: z.string().min(1),
   rewardId: z.string().cuid(),
   shopDomain: z.string().min(1),
+  quantity: z.number().int().positive().optional().default(1),
+});
+
+export const enrollCustomerSchema = z.object({
+  shopifyCustomerId: z.string().min(1),
+  email: z.string().email(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  phone: z.string().optional(),
+  birthday: z.string().datetime().optional(),
+  referralCode: z.string().optional(),
 });
 
 export const customerQuerySchema = z.object({

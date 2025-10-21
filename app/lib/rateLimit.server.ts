@@ -33,14 +33,14 @@ export class RateLimiter {
 // Predefined rate limiters
 export const rateLimiters = {
   // Public API: 100 requests per minute per shop
-  publicApi: new RateLimiter({
+  public: new RateLimiter({
     windowMs: 60 * 1000, // 1 minute
     maxRequests: 100,
     keyGenerator: (shopDomain) => `rate_limit:public:${shopDomain}`,
   }),
 
   // Admin API: 1000 requests per minute per shop
-  adminApi: new RateLimiter({
+  admin: new RateLimiter({
     windowMs: 60 * 1000, // 1 minute
     maxRequests: 1000,
     keyGenerator: (shopDomain) => `rate_limit:admin:${shopDomain}`,

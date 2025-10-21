@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.server";
 import { cache, CacheKeys, CacheTTL } from "../lib/cache.server";
 import { validateRequestBody, earnPointsSchema, redeemPointsSchema, adjustPointsSchema } from "../lib/validation";
 import { LoyaltyAppError, InsufficientPointsError, NotFoundError } from "../lib/errors";
+import { nanoid } from "nanoid";
 import type {
   Customer,
   Transaction,
@@ -277,6 +278,79 @@ export class LoyaltyService {
 
       console.log(`Customer ${customerId} upgraded to tier ${qualifyingTier.name}`);
     }
+  }
+
+  /**
+   * Redeem a reward for a customer
+   */
+  async redeemReward(params: {
+    customerId: string;
+    rewardId: string;
+    quantity?: number;
+  }) {
+    const { customerId, rewardId, quantity = 1 } = params;
+
+    return await prisma.$transaction(async (tx) => {
+      // Get customer and reward
+      const customer = await tx.customer.findUnique({
+        where: { id: customerId },
+      });
+
+      const reward = await tx.reward.findUnique({
+        where: { id: rewardId },
+      });
+
+      if (!customer) {
+        throw new NotFoundError("Customer not found");
+      }
+
+      if (!reward || !reward.active) {
+        throw new NotFoundError("Reward not found or inactive");
+      }
+
+      const totalCost = reward.pointsCost * quantity;
+
+      if (customer.pointsBalance < totalCost) {
+        throw new InsufficientPointsError(totalCost, customer.pointsBalance);
+      }
+
+      // Create redemption record
+      const redemption = await tx.redemption.create({
+        data: {
+          customerId,
+          rewardId,
+          pointsUsed: totalCost,
+          status: "PENDING",
+          discountCode: `RED-${Date.now()}-${nanoid(9)}`,
+        },
+      });
+
+      // Create transaction record
+      await tx.transaction.create({
+        data: {
+          shopId: customer.shopId,
+          customerId,
+          type: "REDEEMED",
+          points: -totalCost,
+          balanceBefore: customer.pointsBalance,
+          balanceAfter: customer.pointsBalance - totalCost,
+          description: `Redeemed: ${reward.name} (x${quantity})`,
+          source: "REWARD_REDEMPTION",
+          metadata: { redemptionId: redemption.id, rewardId },
+        },
+      });
+
+      // Update customer balance
+      await tx.customer.update({
+        where: { id: customerId },
+        data: {
+          pointsBalance: customer.pointsBalance - totalCost,
+          lastActivityAt: new Date(),
+        },
+      });
+
+      return redemption;
+    });
   }
 
   /**
