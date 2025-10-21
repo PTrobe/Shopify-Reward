@@ -1,46 +1,144 @@
 import '@shopify/ui-extensions/preact';
-import {render} from "preact";
+import {render, useState, useEffect} from "preact/hooks";
 
 // 1. Export the extension
 export default async () => {
-  render(<Extension />, document.body)
+  render(<LoyaltyCheckoutExtension />, document.body)
 };
 
-function Extension() {
-  // 2. Check instructions for feature availability, see https://shopify.dev/docs/api/checkout-ui-extensions/apis/cart-instructions for details
-  if (!shopify.instructions.value.attributes.canUpdateAttributes) {
-    // For checkouts such as draft order invoices, cart attributes may not be allowed
-    // Consider rendering a fallback UI or nothing at all, if the feature is unavailable
+function LoyaltyCheckoutExtension() {
+  const [loyaltyData, setLoyaltyData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Get checkout data
+  const totalAmount = shopify.cost.totalAmount.amount;
+  const customerId = shopify.customer?.id;
+  const shop = shopify.shop.domain;
+
+  useEffect(() => {
+    if (customerId && shop) {
+      loadLoyaltyData();
+    } else {
+      setLoading(false);
+    }
+  }, [customerId, shop, totalAmount]);
+
+  const loadLoyaltyData = async () => {
+    try {
+      setLoading(true);
+
+      // Call our app proxy API to get customer loyalty status
+      const response = await fetch(`/apps/loyco_rewards/api/customer/${customerId}/status?shop=${shop}`);
+      const data = await response.json();
+
+      if (data.enrolled && data.program) {
+        // Calculate points that will be earned
+        const orderTotal = parseFloat(totalAmount);
+        const pointsPerDollar = data.program.pointsPerDollar || 1;
+        const tierMultiplier = data.tier?.pointsMultiplier || 1;
+        const basePoints = Math.floor(orderTotal * pointsPerDollar);
+        const totalPoints = Math.floor(basePoints * tierMultiplier);
+
+        setLoyaltyData({
+          ...data,
+          pointsToEarn: totalPoints,
+          basePoints,
+          bonusPoints: totalPoints - basePoints
+        });
+      } else {
+        setLoyaltyData(data);
+      }
+    } catch (err) {
+      console.error('Failed to load loyalty data:', err);
+      setError('Unable to load loyalty information');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Don't render anything if customer is not logged in
+  if (!customerId) {
+    return null;
+  }
+
+  if (loading) {
     return (
-      <s-banner heading="Loyco Checkout Extension" tone="warning">
-        {shopify.i18n.translate("attributeChangesAreNotSupported")}
+      <s-banner heading="🎁 Loyalty Rewards">
+        <s-text>Loading your loyalty status...</s-text>
       </s-banner>
     );
   }
 
-  // 3. Render a UI
+  if (error) {
+    return (
+      <s-banner tone="subdued">
+        <s-text>{error}</s-text>
+      </s-banner>
+    );
+  }
+
+  // Show enrollment prompt for non-enrolled customers
+  if (!loyaltyData?.enrolled) {
+    return (
+      <s-banner heading="🎁 Join Our Loyalty Program" tone="info">
+        <s-stack gap="tight">
+          <s-text>
+            Start earning points on every purchase and unlock exclusive rewards!
+          </s-text>
+          {loyaltyData?.program && (
+            <s-text appearance="subdued">
+              Earn {Math.floor(parseFloat(totalAmount) * (loyaltyData.program.pointsPerDollar || 1))} points on this order when you join!
+            </s-text>
+          )}
+        </s-stack>
+      </s-banner>
+    );
+  }
+
+  // Show loyalty benefits for enrolled customers
   return (
-    <s-banner heading="Loyco Checkout Extension">
+    <s-banner heading="🎁 Loyalty Rewards" tone="success">
       <s-stack gap="base">
-        <s-text>
-          {shopify.i18n.translate("welcome", {
-            target: <s-text type="emphasis">{shopify.extension.target}</s-text>,
-          })}
-        </s-text>
-        <s-button onClick={handleClick}>
-          {shopify.i18n.translate("addAFreeGiftToMyOrder")}
-        </s-button>
+        {/* Points to earn */}
+        {loyaltyData.pointsToEarn > 0 && (
+          <s-stack gap="tight">
+            <s-text type="emphasis">
+              You'll earn {loyaltyData.pointsToEarn.toLocaleString()} {loyaltyData.program.pointsName || 'points'}
+            </s-text>
+
+            {loyaltyData.bonusPoints > 0 && (
+              <s-text appearance="subdued" size="small">
+                {loyaltyData.basePoints.toLocaleString()} base + {loyaltyData.bonusPoints.toLocaleString()} tier bonus
+              </s-text>
+            )}
+
+            <s-text appearance="subdued" size="small">
+              New balance: {(loyaltyData.customer.pointsBalance + loyaltyData.pointsToEarn).toLocaleString()} {loyaltyData.program.pointsName || 'points'}
+            </s-text>
+          </s-stack>
+        )}
+
+        {/* Available rewards */}
+        {loyaltyData.availableRewards && loyaltyData.availableRewards.length > 0 && (
+          <>
+            <s-divider />
+            <s-stack gap="tight">
+              <s-text size="small" type="emphasis">
+                🏆 You can redeem:
+              </s-text>
+              {loyaltyData.availableRewards.slice(0, 2).map((reward, index) => (
+                <s-inline-stack key={index} gap="tight" block-alignment="center">
+                  <s-text size="small">{reward.name}</s-text>
+                  <s-text size="small" appearance="subdued">
+                    ({reward.pointsCost.toLocaleString()} pts)
+                  </s-text>
+                </s-inline-stack>
+              ))}
+            </s-stack>
+          </>
+        )}
       </s-stack>
     </s-banner>
   );
-
-  async function handleClick() {
-    // 4. Call the API to modify checkout
-    const result = await shopify.applyAttributeChange({
-      key: "requestedFreeGift",
-      type: "updateAttribute",
-      value: "yes",
-    });
-    console.log("applyAttributeChange result", result);
-  }
 }

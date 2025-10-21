@@ -3,6 +3,7 @@ import {
   ApiVersion,
   AppDistribution,
   shopifyApp,
+  DeliveryMethod,
 } from "@shopify/shopify-app-remix/server";
 import { MemorySessionStorage } from "@shopify/shopify-app-session-storage-memory";
 import { restResources } from "@shopify/shopify-api/rest/admin/2024-01";
@@ -44,27 +45,27 @@ const shopify = shopifyApp({
   restResources,
   webhooks: {
     APP_UNINSTALLED: {
-      deliveryMethod: "http",
+      deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/webhooks",
     },
     ORDERS_CREATE: {
-      deliveryMethod: "http",
+      deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/webhooks",
     },
     ORDERS_UPDATED: {
-      deliveryMethod: "http",
+      deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/webhooks",
     },
     ORDERS_CANCELLED: {
-      deliveryMethod: "http",
+      deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/webhooks",
     },
     CUSTOMERS_CREATE: {
-      deliveryMethod: "http",
+      deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/webhooks",
     },
     CUSTOMERS_UPDATE: {
-      deliveryMethod: "http",
+      deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/webhooks",
     },
   },

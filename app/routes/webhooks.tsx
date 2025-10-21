@@ -10,7 +10,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   console.log(`Received ${topic} webhook for ${shop}`);
 
   try {
-    switch (topic) {
+    switch (topic as string) {
       case "APP_UNINSTALLED":
         await handleAppUninstalled(shop, payload);
         break;

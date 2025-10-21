@@ -129,7 +129,7 @@ export class WebhookProcessor {
 
     // Calculate points
     const orderTotal = parseFloat(orderData.total_price || '0');
-    const tierMultiplier = customer.currentTier?.pointsMultiplier || 1.0;
+    const tierMultiplier = customer.currentTierId ? 1.0 : 1.0; // TODO: Get actual tier multiplier
     const points = this.loyaltyService.calculateOrderPoints(
       orderTotal,
       shop.loyaltyProgram,
