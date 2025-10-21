@@ -18,8 +18,9 @@ const server = createServer((req, res) => {
   res.setHeader('Content-Type', 'application/json');
 
   if (url.pathname === '/health') {
+    console.log(`🏥 Health check request from ${req.headers['x-forwarded-for'] || req.connection.remoteAddress}`);
     res.statusCode = 200;
-    res.end(JSON.stringify({
+    const healthResponse = {
       status: "healthy",
       timestamp: new Date().toISOString(),
       version: "1.0.0",
@@ -27,7 +28,9 @@ const server = createServer((req, res) => {
       port: port,
       url: process.env.SHOPIFY_APP_URL,
       build_check: "debug_mode"
-    }));
+    };
+    res.end(JSON.stringify(healthResponse));
+    console.log(`✅ Health check response sent:`, healthResponse);
     return;
   }
 
