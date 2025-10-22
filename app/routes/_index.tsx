@@ -4,7 +4,9 @@ import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-  return redirect("/app");
+  const url = new URL(request.url);
+  const search = url.search ? url.search : "";
+  return redirect(`/app${search}`);
 };
 
 export default function Index() {
