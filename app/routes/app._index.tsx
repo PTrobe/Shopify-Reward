@@ -105,7 +105,7 @@ export default function App() {
               </Box>
               <Box paddingBlockStart="500">
                 <ButtonGroup>
-                  <Link to="/app/theme" style={{ textDecoration: 'none' }}>
+                  <Link to="/app/setup" style={{ textDecoration: 'none' }}>
                     <Button variant="primary">
                       Start Setup
                     </Button>
