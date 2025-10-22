@@ -1,5 +1,6 @@
 import '@shopify/ui-extensions/preact';
-import {render, useState, useEffect} from "preact/hooks";
+import {useState, useEffect} from "preact/hooks";
+import {render} from "preact";
 
 // 1. Export the extension
 export default async () => {

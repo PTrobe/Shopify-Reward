@@ -6,13 +6,14 @@
 {% assign customer_points = 0 %}
 {% assign customer_id = customer.id %}
 
-{% comment %} Get customer points from app API {% endcomment %}
+{% comment %}
+  Note: Theme blocks cannot make HTTP requests directly.
+  Points data will need to be injected via JavaScript or app proxy.
+  For now, using placeholder data for development.
+{% endcomment %}
 {% if customer_id %}
-  {% assign api_url = 'https://shopify-reward-production.up.railway.app/apps/loyco-rewards/api/customer/' | append: customer_id | append: '/status' %}
-  {% assign points_response = api_url | url_fetch %}
-  {% if points_response.status == 200 %}
-    {% assign customer_points = points_response.data.points | default: 0 %}
-  {% endif %}
+  {% comment %} Placeholder points - will be replaced by JS injection {% endcomment %}
+  {% assign customer_points = 100 %}
 {% endif %}
 
 {% comment %} Only show if customer has points or is logged in {% endcomment %}
@@ -92,7 +93,7 @@
 {% schema %}
 {
   "name": "Loyalty Points Header",
-  "target": "header",
+  "target": "section",
   "settings": [
     {
       "type": "color",
