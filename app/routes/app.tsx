@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Outlet, useLoaderData } from "@remix-run/react";
+import { AppProvider } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -22,25 +23,40 @@ export default function App() {
   const { shop } = useLoaderData<typeof loader>();
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      background: "#f6f6f7"
-    }}>
-      <header style={{
-        background: "white",
-        padding: "16px 24px",
-        borderBottom: "1px solid #e1e3e5",
-        marginBottom: "24px"
-      }}>
-        <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 600 }}>
-          Loyco Rewards - {shop}
-        </h1>
-      </header>
-
-      <main style={{ padding: "0 24px" }}>
-        <Outlet />
-      </main>
-    </div>
+    <AppProvider
+      i18n={{
+        Polaris: {
+          Avatar: {
+            label: 'Avatar',
+            labelWithInitials: 'Avatar with initials {initials}',
+          },
+          ContextualSaveBar: {
+            save: 'Save',
+            discard: 'Discard',
+          },
+          TextField: {
+            characterCount: '{count} characters',
+          },
+          TopBar: {
+            toggleMenuLabel: 'Toggle menu',
+            SearchField: {
+              clearButtonLabel: 'Clear',
+              search: 'Search',
+            },
+          },
+          Modal: {
+            iFrameTitle: 'body markup',
+          },
+          Frame: {
+            skipToContent: 'Skip to content',
+            Navigation: {
+              closeMobileNavigationLabel: 'Close navigation',
+            },
+          },
+        },
+      }}
+    >
+      <Outlet />
+    </AppProvider>
   );
 }
