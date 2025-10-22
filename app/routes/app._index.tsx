@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, Link } from "@remix-run/react";
+import { useState } from "react";
 import {
   Page,
   Layout,
@@ -11,6 +12,8 @@ import {
   ButtonGroup,
   Banner,
   Box,
+  Toast,
+  Frame,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 
@@ -38,17 +41,45 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export default function App() {
   const { shop, shopInfo } = useLoaderData<typeof loader>();
+  const [toastActive, setToastActive] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setToastActive(true);
+  };
+
+  const handleLaunchProgram = () => {
+    showToast("Program launch feature coming soon!");
+  };
+
+  const handleStartSetup = () => {
+    showToast("Setup wizard will be available in the next phase!");
+  };
+
+  const handleViewDocumentation = () => {
+    // Open documentation in new tab
+    window.open("https://help.shopify.com/en/manual/apps", "_blank");
+  };
+
+  const toastMarkup = toastActive ? (
+    <Toast
+      content={toastMessage}
+      onDismiss={() => setToastActive(false)}
+    />
+  ) : null;
 
   return (
-    <Page
-      title="Loyco Rewards"
-      subtitle={`Loyalty program for ${shop}`}
-      primaryAction={
-        <Button variant="primary">
-          Launch Program
-        </Button>
-      }
-    >
+    <Frame>
+      <Page
+        title="Loyco Rewards"
+        subtitle={`Loyalty program for ${shop}`}
+        primaryAction={
+          <Button variant="primary" onClick={handleLaunchProgram}>
+            Launch Program
+          </Button>
+        }
+      >
       <Layout>
         <Layout.Section>
           <Banner title="Welcome to Loyco Rewards!" tone="success">
@@ -77,10 +108,10 @@ export default function App() {
               </Box>
               <Box paddingBlockStart="500">
                 <ButtonGroup>
-                  <Button variant="primary">
+                  <Button variant="primary" onClick={handleStartSetup}>
                     Start Setup
                   </Button>
-                  <Button>
+                  <Button onClick={handleViewDocumentation}>
                     View Documentation
                   </Button>
                 </ButtonGroup>
@@ -114,6 +145,8 @@ export default function App() {
           </Card>
         </Layout.Section>
       </Layout>
+      {toastMarkup}
     </Page>
+    </Frame>
   );
 }
