@@ -7,6 +7,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
+import polarisStyles from "@shopify/polaris/build/esm/styles.css";
 
 export const meta: MetaFunction = () => {
   return [
@@ -16,7 +17,9 @@ export const meta: MetaFunction = () => {
 };
 
 export const links: LinksFunction = () => {
-  return [];
+  return [
+    { rel: "stylesheet", href: polarisStyles },
+  ];
 };
 
 export default function App() {
