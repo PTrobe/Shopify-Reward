@@ -1,8 +1,12 @@
+import type { LoaderFunctionArgs } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
+import { authenticate } from "../shopify.server";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  await authenticate.admin(request);
+  return redirect("/app");
+};
+
 export default function Index() {
-  return (
-    <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
-      <h1>Welcome to Loyco Rewards</h1>
-      <p>Your Shopify loyalty app is starting up...</p>
-    </div>
-  );
+  return null;
 }
