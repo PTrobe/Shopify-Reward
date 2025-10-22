@@ -42,7 +42,7 @@ const server = createServer(async (request, response) => {
   try {
     // Handle static files from build directory
     if (request.url?.startsWith('/build/')) {
-      const filePath = join(process.cwd(), request.url);
+      const filePath = join(process.cwd(), 'public', request.url);
       if (existsSync(filePath)) {
         const ext = extname(filePath);
         const mimeTypes = {
