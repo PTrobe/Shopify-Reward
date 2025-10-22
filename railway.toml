@@ -1,5 +1,5 @@
 [build]
-buildCommand = "rm -rf node_modules/.cache && npm ci && npm run build && node debug-build.js"
+buildCommand = "rm -rf node_modules/.cache && npm ci && npm run build"
 
 [deploy]
 preDeployCommand = "npx prisma migrate deploy"
