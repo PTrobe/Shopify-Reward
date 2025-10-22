@@ -43,6 +43,9 @@ const shopify = shopifyApp({
   sessionStorage: new MemorySessionStorage(),
   distribution: AppDistribution.AppStore,
   restResources,
+  future: {
+    unstable_newEmbeddedAuthStrategy: true,
+  },
   webhooks: {
     APP_UNINSTALLED: {
       deliveryMethod: DeliveryMethod.Http,
