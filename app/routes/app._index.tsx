@@ -91,7 +91,7 @@ export default function App() {
                 Quick Setup
               </Text>
               <Box paddingBlockStart="300">
-                <Text variant="bodyMd" color="subdued">
+                <Text variant="bodyMd" tone="subdued" as="p">
                   Get started with your loyalty program in just a few minutes:
                 </Text>
               </Box>
@@ -105,11 +105,12 @@ export default function App() {
               </Box>
               <Box paddingBlockStart="500">
                 <ButtonGroup>
-                  <Link to="/app/setup" style={{ textDecoration: 'none' }}>
-                    <Button variant="primary">
-                      Start Setup
-                    </Button>
-                  </Link>
+                  <Button
+                    variant="primary"
+                    url="/app/setup"
+                  >
+                    Start Setup
+                  </Button>
                   <Button onClick={handleViewDocumentation}>
                     View Documentation
                   </Button>
@@ -135,7 +136,7 @@ export default function App() {
                     <List.Item><strong>Plan:</strong> {shopInfo.plan_display_name}</List.Item>
                   </List>
                 ) : (
-                  <Text variant="bodyMd" color="subdued">
+                  <Text variant="bodyMd" tone="subdued" as="p">
                     Unable to load shop information
                   </Text>
                 )}

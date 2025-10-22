@@ -5,18 +5,12 @@ import { AppProvider } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const { session } = await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
 
-    return json({
-      shop: session.shop,
-      authenticated: true,
-    });
-  } catch (error) {
-    // If authentication fails, let the auth system handle it
-    console.error("Authentication error:", error);
-    throw error;
-  }
+  return json({
+    shop: session.shop,
+    authenticated: true,
+  });
 };
 
 export default function App() {

@@ -25,7 +25,7 @@ export default function Setup() {
                 Coming soon
               </Text>
               <Box paddingBlockStart="300">
-                <Text color="subdued">
+                <Text tone="subdued" as="p">
                   We&apos;re still building out the guided setup experience. In the meantime,
                   you can manage your loyalty program from the dashboard sections.
                 </Text>
