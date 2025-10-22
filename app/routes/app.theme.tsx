@@ -27,7 +27,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       session,
     });
 
-    const themes = themesResponse.data.map((theme: any) => ({
+    const themes = themesResponse.data.map((theme: { id: number; name: string; role: string }) => ({
       id: theme.id.toString(),
       name: theme.name,
       role: theme.role,
@@ -67,11 +67,11 @@ export default function ThemeManager() {
   const submit = useSubmit();
 
   const [selectedTheme, setSelectedTheme] = useState(
-    themes.find((theme) => theme.role === "main")?.id || themes[0]?.id || ""
+    themes.find((theme: { id: string; name: string; role: string }) => theme.role === "main")?.id || themes[0]?.id || ""
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  const themeOptions = themes.map((theme) => ({
+  const themeOptions = themes.map((theme: { id: string; name: string; role: string }) => ({
     label: `${theme.name} ${theme.role === "main" ? "(Published)" : ""}`,
     value: theme.id,
   }));
@@ -86,7 +86,7 @@ export default function ThemeManager() {
     setTimeout(() => setIsLoading(false), 2000);
   };
 
-  const selectedThemeData = themes.find((theme) => theme.id === selectedTheme);
+  const selectedThemeData = themes.find((theme: { id: string; name: string; role: string }) => theme.id === selectedTheme);
 
   return (
     <Frame>
@@ -127,7 +127,7 @@ export default function ThemeManager() {
 
                 {selectedThemeData && (
                   <Box paddingBlockStart="400">
-                    <Text variant="bodyMd" color="subdued">
+                    <Text variant="bodyMd" tone="subdued" as="p">
                       Selected: <strong>{selectedThemeData.name}</strong>{" "}
                       {selectedThemeData.role === "main" && "(Published Theme)"}
                     </Text>
@@ -144,7 +144,7 @@ export default function ThemeManager() {
                   Header Points Block
                 </Text>
                 <Box paddingBlockStart="300">
-                  <Text variant="bodyMd" color="subdued">
+                  <Text variant="bodyMd" tone="subdued" as="p">
                     Compact loyalty points display for your header. Shows a star icon with points count.
                   </Text>
                 </Box>
@@ -176,7 +176,7 @@ export default function ThemeManager() {
                 </Box>
 
                 <Box paddingBlockStart="400">
-                  <Text variant="bodySm" color="subdued">
+                  <Text variant="bodySm" tone="subdued" as="p">
                     After installation, go to your theme editor and add the "Loyco Header Points" block to your header section.
                   </Text>
                 </Box>
@@ -191,7 +191,7 @@ export default function ThemeManager() {
                   Customer Loyalty Page
                 </Text>
                 <Box paddingBlockStart="300">
-                  <Text variant="bodyMd" color="subdued">
+                  <Text variant="bodyMd" tone="subdued" as="p">
                     Dedicated page where customers can view their loyalty points and status.
                   </Text>
                 </Box>
@@ -234,7 +234,7 @@ export default function ThemeManager() {
                     </Button>
                     <Button
                       variant="secondary"
-                      destructive
+                      tone="critical"
                       loading={isLoading}
                       onClick={() => handleInstall("uninstall")}
                     >
@@ -244,7 +244,7 @@ export default function ThemeManager() {
                 </Box>
 
                 <Box paddingBlockStart="400">
-                  <Text variant="bodySm" color="subdued">
+                  <Text variant="bodySm" tone="subdued" as="p">
                     Install all loyalty blocks at once, or remove all blocks if you need to uninstall the app.
                   </Text>
                 </Box>
