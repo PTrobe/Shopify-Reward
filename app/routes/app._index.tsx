@@ -4,16 +4,25 @@ import { useLoaderData } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
+  try {
+    const { admin, session } = await authenticate.admin(request);
 
-  // Get shop information
-  const response = await admin.rest.resources.Shop.all({ session });
-  const shop = response.data[0];
+    // Get shop information
+    const response = await admin.rest.resources.Shop.all({ session });
+    const shop = response.data[0];
 
-  return json({
-    shop: session.shop,
-    shopInfo: shop,
-  });
+    return json({
+      shop: session.shop,
+      shopInfo: shop,
+    });
+  } catch (error) {
+    console.error("Error loading shop data:", error);
+    // Return minimal data if shop API fails
+    return json({
+      shop: "Unknown Shop",
+      shopInfo: null,
+    });
+  }
 };
 
 export default function App() {
