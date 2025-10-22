@@ -53,10 +53,6 @@ export default function App() {
     showToast("Program launch feature coming soon!");
   };
 
-  const handleStartSetup = () => {
-    // Navigate to theme management instead of showing toast
-    window.location.href = "/app/theme";
-  };
 
   const handleViewDocumentation = () => {
     // Open documentation in new tab
@@ -109,9 +105,11 @@ export default function App() {
               </Box>
               <Box paddingBlockStart="500">
                 <ButtonGroup>
-                  <Button variant="primary" onClick={handleStartSetup}>
-                    Start Setup
-                  </Button>
+                  <Link to="/app/theme" style={{ textDecoration: 'none' }}>
+                    <Button variant="primary">
+                      Start Setup
+                    </Button>
+                  </Link>
                   <Button onClick={handleViewDocumentation}>
                     View Documentation
                   </Button>
