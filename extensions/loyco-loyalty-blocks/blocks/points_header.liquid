@@ -1,0 +1,123 @@
+{% comment %}
+  Compact header block for displaying customer loyalty points
+  Designed for small header spaces with star icon + points number only
+{% endcomment %}
+
+{% assign customer_points = 0 %}
+{% assign customer_id = customer.id %}
+
+{% comment %} Get customer points from app API {% endcomment %}
+{% if customer_id %}
+  {% assign api_url = 'https://shopify-reward-production.up.railway.app/apps/loyco-rewards/api/customer/' | append: customer_id | append: '/status' %}
+  {% assign points_response = api_url | url_fetch %}
+  {% if points_response.status == 200 %}
+    {% assign customer_points = points_response.data.points | default: 0 %}
+  {% endif %}
+{% endif %}
+
+{% comment %} Only show if customer has points or is logged in {% endcomment %}
+{% if customer and customer_points >= 0 %}
+<div class="loyco-header-points" style="
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(255, 215, 0, 0.1);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #B8860B;
+  white-space: nowrap;
+  max-width: 60px;
+  overflow: hidden;
+">
+  {% comment %} Star icon using Unicode {% endcomment %}
+  <span class="loyco-star-icon" style="
+    font-size: 14px;
+    color: #FFD700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+  ">★</span>
+
+  {% comment %} Points number {% endcomment %}
+  <span class="loyco-points-count" style="
+    font-size: 11px;
+    font-weight: 700;
+    color: #B8860B;
+    min-width: 0;
+  ">{{ customer_points }}</span>
+</div>
+
+{% comment %} Add hover effect and responsiveness {% endcomment %}
+<style>
+.loyco-header-points {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.loyco-header-points:hover {
+  background: rgba(255, 215, 0, 0.2);
+  transform: scale(1.05);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .loyco-header-points {
+    font-size: 11px;
+    padding: 1px 4px;
+    gap: 3px;
+    max-width: 50px;
+  }
+
+  .loyco-star-icon {
+    font-size: 12px;
+  }
+
+  .loyco-points-count {
+    font-size: 10px;
+  }
+}
+
+/* Ultra compact for very small headers */
+@media (max-width: 480px) {
+  .loyco-header-points {
+    max-width: 40px;
+    padding: 1px 3px;
+  }
+}
+</style>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Loyalty Points Header",
+  "target": "header",
+  "settings": [
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star Color",
+      "default": "#FFD700"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#B8860B"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "rgba(255, 215, 0, 0.1)"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_only_when_points",
+      "label": "Only show when customer has points",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

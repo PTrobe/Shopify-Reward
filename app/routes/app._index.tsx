@@ -54,7 +54,8 @@ export default function App() {
   };
 
   const handleStartSetup = () => {
-    showToast("Setup wizard will be available in the next phase!");
+    // Navigate to theme management instead of showing toast
+    window.location.href = "/app/theme";
   };
 
   const handleViewDocumentation = () => {
@@ -100,10 +101,10 @@ export default function App() {
               </Box>
               <Box paddingBlockStart="400">
                 <List type="number">
+                  <List.Item>Install loyalty blocks to your theme</List.Item>
                   <List.Item>Configure your points system</List.Item>
-                  <List.Item>Set up rewards</List.Item>
-                  <List.Item>Customize your widget</List.Item>
-                  <List.Item>Launch your program</List.Item>
+                  <List.Item>Set up rewards and incentives</List.Item>
+                  <List.Item>Launch your loyalty program</List.Item>
                 </List>
               </Box>
               <Box paddingBlockStart="500">
