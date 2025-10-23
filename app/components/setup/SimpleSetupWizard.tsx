@@ -34,6 +34,24 @@ interface RewardTier {
   description: string;
 }
 
+type ThemeSummary = {
+  id: string;
+  name: string;
+  role: string;
+};
+
+type ThemeActionResponse = {
+  success?: boolean;
+  message?: string;
+  error?: string;
+  details?: Record<string, unknown>;
+};
+
+type SetupLoaderData = {
+  shop: string;
+  themes: ThemeSummary[];
+};
+
 interface WizardState {
   step: number;
   programName: string;
@@ -89,8 +107,8 @@ const TOTAL_STEPS = 8;
 export function SimpleSetupWizard() {
   const location = useLocation();
   const navigate = useNavigate();
-  const loaderData = useLoaderData<{ shop: string; themes: Array<{id: string, name: string, role: string}> }>();
-  const fetcher = useFetcher();
+  const loaderData = useLoaderData<SetupLoaderData>();
+  const fetcher = useFetcher<ThemeActionResponse>();
 
   const [state, setState] = useState<WizardState>({
     step: 1,
@@ -165,7 +183,7 @@ export function SimpleSetupWizard() {
 
     if (availableThemes.length > 0 && !state.selectedTheme) {
       const mainTheme = availableThemes.find((theme) => theme.role === 'main');
-      const selectedThemeId = mainTheme?.id || availableThemes[0]?.id || '';
+      const selectedThemeId = String(mainTheme?.id ?? availableThemes[0]?.id ?? '');
 
       console.log('🎨 Auto-selecting theme:', selectedThemeId, mainTheme);
 
@@ -323,8 +341,7 @@ export function SimpleSetupWizard() {
   const installThemeBlocks = () => {
     const selectedThemeId =
       state.selectedTheme ||
-      availableThemes.find((theme) => theme.role === 'main')?.id ||
-      availableThemes[0]?.id;
+      String(availableThemes.find((theme) => theme.role === 'main')?.id ?? availableThemes[0]?.id ?? '');
 
     if (!selectedThemeId) {
       setErrors(['No available theme to install into.']);
@@ -349,7 +366,7 @@ export function SimpleSetupWizard() {
       themeId: selectedThemeId
     });
 
-    fetcher.submit(formData, { method: 'post' });
+    fetcher.submit(formData, { method: 'post', action: '/api/admin/theme' });
   };
 
   // Handle fetcher response
@@ -371,7 +388,7 @@ export function SimpleSetupWizard() {
           }));
         }, 1800);
       } else {
-        const message = fetcher.data.error || 'Theme installation failed. Please try again.';
+        const message = fetcher.data.message || fetcher.data.error || 'Theme installation failed. Please try again.';
         console.error('Theme installation failed:', fetcher.data);
         setState((prev) => ({
           ...prev,

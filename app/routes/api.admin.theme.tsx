@@ -46,7 +46,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const themeId = formData.get("themeId");
 
     if (!themeId) {
-      return json({ error: "Theme ID is required" }, { status: 400 });
+      return json({ success: false, message: "Theme ID is required." });
     }
 
     const installer = new ThemeInstaller({
@@ -69,10 +69,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return json(await installer.uninstallAll());
 
       default:
-        return json({ error: "Invalid action" }, { status: 400 });
+        return json({ success: false, message: "Invalid theme action." });
     }
   } catch (error) {
     console.error("Error managing theme:", error);
-    return json({ error: "Failed to manage theme" }, { status: 500 });
+    return json({
+      success: false,
+      message: formatThemeError(error),
+    });
   }
 };
+
+function formatThemeError(error: unknown): string {
+  if (error instanceof Response) {
+    return `Theme API responded with status ${error.status}.`;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error && "message" in error) {
+    return String((error as any).message);
+  }
+
+  return "Unexpected error while installing loyalty blocks.";
+}

@@ -37,6 +37,33 @@ const HEADER_MARKER_END = "{% comment %} Loyco Rewards header points end {% endc
 const assetPath = (relativePath: string) =>
   path.resolve(process.cwd(), "app", "theme", relativePath);
 
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    if ("message" in error && typeof (error as any).message === "string") {
+      return (error as any).message;
+    }
+
+    if ("response" in error && typeof (error as any).response === "object") {
+      const response = (error as any).response;
+      if (response?.errors) {
+        return JSON.stringify(response.errors);
+      }
+      if (typeof response?.message === "string") {
+        return response.message;
+      }
+      if (typeof response?.body === "string") {
+        return response.body;
+      }
+    }
+  }
+
+  return String(error);
+}
+
 async function readAssetFromDisk(relativePath: string) {
   return fs.readFile(assetPath(relativePath), "utf-8");
 }
@@ -143,101 +170,117 @@ export class ThemeInstaller {
   }
 
   async installHeaderBlock(): Promise<ThemeInstallResult> {
-    const snippetContent = await readAssetFromDisk("snippets/loyco-header-points.liquid");
-    await upsertAsset(this.admin, this.session, this.themeId, HEADER_SNIPPET_KEY, snippetContent);
+    try {
+      const snippetContent = await readAssetFromDisk("snippets/loyco-header-points.liquid");
+      await upsertAsset(this.admin, this.session, this.themeId, HEADER_SNIPPET_KEY, snippetContent);
 
-    const layoutContent = await fetchAsset(
-      this.admin,
-      this.session,
-      this.themeId,
-      THEME_LAYOUT_KEY,
-    );
+      const layoutContent = await fetchAsset(
+        this.admin,
+        this.session,
+        this.themeId,
+        THEME_LAYOUT_KEY,
+      );
 
-    if (!layoutContent) {
-      return {
-        success: false,
-        message: "Unable to locate layout/theme.liquid on the selected theme.",
-      };
-    }
+      if (!layoutContent) {
+        return {
+          success: false,
+          message: "Unable to locate layout/theme.liquid on the selected theme.",
+        };
+      }
 
-    await backupAsset(this.admin, this.session, this.themeId, THEME_LAYOUT_KEY);
+      await backupAsset(this.admin, this.session, this.themeId, THEME_LAYOUT_KEY);
 
-    const updatedLayout = injectHeaderSnippet(layoutContent);
-    if (updatedLayout === layoutContent) {
+      const updatedLayout = injectHeaderSnippet(layoutContent);
+      if (updatedLayout === layoutContent) {
+        return {
+          success: true,
+          message: "Header block already installed.",
+        };
+      }
+
+      await upsertAsset(this.admin, this.session, this.themeId, THEME_LAYOUT_KEY, updatedLayout);
+
       return {
         success: true,
-        message: "Header block already installed.",
+        message: "Header block installed successfully.",
       };
+    } catch (error) {
+      throw new Error(`Failed to install header block: ${extractErrorMessage(error)}`);
     }
-
-    await upsertAsset(this.admin, this.session, this.themeId, THEME_LAYOUT_KEY, updatedLayout);
-
-    return {
-      success: true,
-      message: "Header block installed successfully.",
-    };
   }
 
   async installCustomerPage(): Promise<ThemeInstallResult> {
-    const templateContent = await readAssetFromDisk("templates/customers.loyalty.liquid");
-    await upsertAsset(
-      this.admin,
-      this.session,
-      this.themeId,
-      CUSTOMER_TEMPLATE_KEY,
-      templateContent,
-    );
+    try {
+      const templateContent = await readAssetFromDisk("templates/customers.loyalty.liquid");
+      await upsertAsset(
+        this.admin,
+        this.session,
+        this.themeId,
+        CUSTOMER_TEMPLATE_KEY,
+        templateContent,
+      );
 
-    return {
-      success: true,
-      message: "Customer loyalty page installed successfully.",
-    };
+      return {
+        success: true,
+        message: "Customer loyalty page installed successfully.",
+      };
+    } catch (error) {
+      throw new Error(`Failed to install customer loyalty page: ${extractErrorMessage(error)}`);
+    }
   }
 
   async installAll(): Promise<ThemeInstallResult> {
-    const headerResult = await this.installHeaderBlock();
-    const pageResult = await this.installCustomerPage();
+    try {
+      const headerResult = await this.installHeaderBlock();
+      const pageResult = await this.installCustomerPage();
 
-    const successes = [headerResult, pageResult].filter((result) => result.success);
-    const errors = [headerResult, pageResult].filter((result) => !result.success);
+      const successes = [headerResult, pageResult].filter((result) => result.success);
+      const errors = [headerResult, pageResult].filter((result) => !result.success);
 
-    if (errors.length) {
+      if (errors.length) {
+        return {
+          success: false,
+          message: errors.map((error) => error.message).join(" "),
+          details: { successes, errors },
+        };
+      }
+
       return {
-        success: false,
-        message: errors.map((error) => error.message).join(" "),
-        details: { successes, errors },
+        success: true,
+        message: "All loyalty blocks installed successfully.",
+        details: { header: headerResult, customerPage: pageResult },
       };
+    } catch (error) {
+      throw new Error(`Failed to install loyalty blocks: ${extractErrorMessage(error)}`);
     }
-
-    return {
-      success: true,
-      message: "All loyalty blocks installed successfully.",
-      details: { header: headerResult, customerPage: pageResult },
-    };
   }
 
   async uninstallAll(): Promise<ThemeInstallResult> {
-    const layoutContent = await fetchAsset(
-      this.admin,
-      this.session,
-      this.themeId,
-      THEME_LAYOUT_KEY,
-    );
+    try {
+      const layoutContent = await fetchAsset(
+        this.admin,
+        this.session,
+        this.themeId,
+        THEME_LAYOUT_KEY,
+      );
 
-    if (layoutContent) {
-      const cleanedLayout = removeHeaderInjection(layoutContent);
-      await upsertAsset(this.admin, this.session, this.themeId, THEME_LAYOUT_KEY, cleanedLayout);
+      if (layoutContent) {
+        const cleanedLayout = removeHeaderInjection(layoutContent);
+        await upsertAsset(this.admin, this.session, this.themeId, THEME_LAYOUT_KEY, cleanedLayout);
+      }
+
+      await Promise.all([
+        this.deleteAssetSafely(HEADER_SNIPPET_KEY),
+        this.deleteAssetSafely(CUSTOMER_TEMPLATE_KEY),
+      ]);
+
+      return {
+        success: true,
+        message: "Loyco Rewards blocks removed from theme.",
+      };
+    } catch (error) {
+      throw new Error(`Failed to uninstall loyalty blocks: ${extractErrorMessage(error)}`);
     }
-
-    await Promise.all([
-      this.deleteAssetSafely(HEADER_SNIPPET_KEY),
-      this.deleteAssetSafely(CUSTOMER_TEMPLATE_KEY),
-    ]);
-
-    return {
-      success: true,
-      message: "Loyco Rewards blocks removed from theme.",
-    };
   }
 
   private async deleteAssetSafely(key: string) {
@@ -260,60 +303,4 @@ export async function loadThemeName(admin: AdminApi, session: any, themeId: stri
   });
 
   return theme?.data?.name ?? "Selected theme";
-}
-
-export async function installAll(admin: AdminApi, session: any, themeId: string): Promise<ThemeInstallResult> {
-  try {
-    console.log(`🛠️ Starting theme installation for theme ID: ${themeId}`);
-
-    // 1. Load and install header snippet
-    console.log("📝 Installing header snippet...");
-    const headerSnippetContent = await readAssetFromDisk(HEADER_SNIPPET_KEY);
-    await upsertAsset(admin, session, themeId, HEADER_SNIPPET_KEY, headerSnippetContent);
-
-    // 2. Load and install customer template
-    console.log("📄 Installing customer loyalty template...");
-    const customerTemplateContent = await readAssetFromDisk(CUSTOMER_TEMPLATE_KEY);
-    await upsertAsset(admin, session, themeId, CUSTOMER_TEMPLATE_KEY, customerTemplateContent);
-
-    // 3. Backup and modify theme layout
-    console.log("🔧 Modifying theme layout...");
-
-    // Create backup of theme layout
-    await backupAsset(admin, session, themeId, THEME_LAYOUT_KEY);
-
-    // Get current layout
-    const currentLayout = await fetchAsset(admin, session, themeId, THEME_LAYOUT_KEY);
-    if (!currentLayout) {
-      throw new Error("Could not fetch theme layout file");
-    }
-
-    // Inject header snippet into layout
-    const modifiedLayout = injectHeaderSnippet(currentLayout);
-    await upsertAsset(admin, session, themeId, THEME_LAYOUT_KEY, modifiedLayout);
-
-    console.log("✅ Theme installation completed successfully");
-
-    return {
-      success: true,
-      message: "Loyalty blocks installed successfully. Header points will now appear in the storefront.",
-      details: {
-        themeId,
-        installedAssets: [HEADER_SNIPPET_KEY, CUSTOMER_TEMPLATE_KEY, THEME_LAYOUT_KEY],
-        backupCreated: true,
-      }
-    };
-
-  } catch (error) {
-    console.error("❌ Theme installation failed:", error);
-
-    return {
-      success: false,
-      message: `Installation failed: ${error instanceof Error ? error.message : String(error)}`,
-      details: {
-        themeId,
-        error: error instanceof Error ? error.message : String(error),
-      }
-    };
-  }
 }
