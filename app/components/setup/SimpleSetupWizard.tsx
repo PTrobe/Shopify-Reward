@@ -158,7 +158,9 @@ export function SimpleSetupWizard() {
   useEffect(() => {
     const fetchThemes = async () => {
       try {
-        const response = await fetch('/api/admin/theme');
+        const response = await fetch('/api/admin/theme', {
+          credentials: 'include',
+        });
         const result = await response.json();
         if (result.themes) {
           const normalizedThemes = result.themes.map((theme: any) => ({
@@ -368,6 +370,7 @@ export function SimpleSetupWizard() {
       const response = await fetch('/api/admin/theme', {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
 
       const result = await response.json();
