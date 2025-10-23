@@ -65,6 +65,8 @@ interface WizardState {
   enableRewardAvailableEmail: boolean;
   emailFromName: string;
   emailFromAddress: string;
+  // Program Launch
+  programLaunched: boolean;
 }
 
 const CURRENCY_OPTIONS = [
@@ -140,6 +142,8 @@ export function SimpleSetupWizard() {
     enableRewardAvailableEmail: true,
     emailFromName: '',
     emailFromAddress: '',
+    // Program Launch defaults
+    programLaunched: false,
   });
 
   const [errors, setErrors] = useState<string[]>([]);
@@ -315,6 +319,11 @@ export function SimpleSetupWizard() {
       const errorState = { ...state, installationStatus: 'error' as const };
       setState(errorState);
     }
+  };
+
+  const launchProgram = () => {
+    // Mark program as launched
+    setState(prev => ({ ...prev, programLaunched: true }));
   };
 
   const progress = (state.step / TOTAL_STEPS) * 100;
@@ -1467,20 +1476,30 @@ export function SimpleSetupWizard() {
       case 8:
         return (
           <Box>
-            <Banner title="🎉 Congratulations! Your loyalty program is ready!" tone="success">
-              <p>Your loyalty program has been successfully configured and is ready to engage your customers.</p>
-            </Banner>
+            {!state.programLaunched ? (
+              <Banner title="🎯 Ready to launch your loyalty program!" tone="info">
+                <p>Your loyalty program is fully configured and ready to go live. Click "Launch Program" to make it available to your customers.</p>
+              </Banner>
+            ) : (
+              <Banner title="🎉 Congratulations! Your loyalty program is live!" tone="success">
+                <p>Your loyalty program has been successfully launched and is now active for your customers.</p>
+              </Banner>
+            )}
 
             <Box paddingBlockStart="500">
               <Card>
                 <Box padding="400">
                   <div style={{ textAlign: 'center' }}>
                     <Text variant="headingLg" as="h2">
-                      🚀 Launch Complete!
+                      {!state.programLaunched ? '🎯 Ready to Launch!' : '🚀 Launch Complete!'}
                     </Text>
                     <Box paddingBlockStart="400">
                       <Text variant="bodyLg" as="p">
-                        Your <strong>{state.programName}</strong> loyalty program is now live and ready to start building customer relationships.
+                        {!state.programLaunched ? (
+                          <>Your <strong>{state.programName}</strong> loyalty program is configured and ready to launch.</>
+                        ) : (
+                          <>Your <strong>{state.programName}</strong> loyalty program is now live and ready to start building customer relationships.</>
+                        )}
                       </Text>
                     </Box>
                   </div>
@@ -1488,133 +1507,116 @@ export function SimpleSetupWizard() {
               </Card>
             </Box>
 
-            <Box paddingBlockStart="400">
-              <Card>
-                <Box padding="400">
-                  <Text variant="headingMd" as="h3">
-                    What's Next?
-                  </Text>
-                  <Box paddingBlockStart="400">
-                    <div style={{ display: 'grid', gap: '16px' }}>
-                      <div style={{
-                        padding: '16px',
-                        background: '#f8fafc',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <Text variant="bodyMd" fontWeight="semibold" as="p">
-                          📊 Monitor Performance
-                        </Text>
-                        <Text variant="bodyMd" as="p">
-                          Track customer engagement, point redemptions, and program ROI in your dashboard.
-                        </Text>
-                      </div>
-
-                      <div style={{
-                        padding: '16px',
-                        background: '#f8fafc',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <Text variant="bodyMd" fontWeight="semibold" as="p">
-                          📧 Customer Communication
-                        </Text>
-                        <Text variant="bodyMd" as="p">
-                          Promote your new loyalty program through email newsletters and social media.
-                        </Text>
-                      </div>
-
-                      <div style={{
-                        padding: '16px',
-                        background: '#f8fafc',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <Text variant="bodyMd" fontWeight="semibold" as="p">
-                          🔧 Customize Further
-                        </Text>
-                        <Text variant="bodyMd" as="p">
-                          Fine-tune rewards, adjust earning rates, and experiment with seasonal promotions.
-                        </Text>
-                      </div>
-                    </div>
-                  </Box>
-                </Box>
-              </Card>
-            </Box>
-
-            <Box paddingBlockStart="400">
-              <Card>
-                <Box padding="400">
-                  <Text variant="headingMd" as="h3">
-                    Quick Stats
-                  </Text>
-                  <Box paddingBlockStart="400">
-                    <Box
-                      padding="400"
-                      background="bg-surface-secondary"
-                      borderRadius="200"
-                    >
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', textAlign: 'center' }}>
-                        <div>
-                          <Text variant="headingMd" as="p">
-                            {state.rewardTiers.length}
-                          </Text>
-                          <Text variant="bodySm" tone="subdued" as="p">
-                            Reward Tiers
-                          </Text>
-                        </div>
-                        <div>
-                          <Text variant="headingMd" as="p">
-                            {state.signupBonus}
-                          </Text>
-                          <Text variant="bodySm" tone="subdued" as="p">
-                            Welcome Bonus
-                          </Text>
-                        </div>
-                        <div>
-                          <Text variant="headingMd" as="p">
-                            {state.pointsPerDollar}x
-                          </Text>
-                          <Text variant="bodySm" tone="subdued" as="p">
-                            Earning Rate
-                          </Text>
-                        </div>
-                        <div>
-                          <Text variant="headingMd" as="p">
-                            {[state.enableWelcomeEmail, state.enablePointsEarnedEmail, state.enableRewardAvailableEmail].filter(Boolean).length}
-                          </Text>
-                          <Text variant="bodySm" tone="subdued" as="p">
-                            Email Types
-                          </Text>
-                        </div>
-                      </div>
-                    </Box>
-                  </Box>
-                </Box>
-              </Card>
-            </Box>
-
-            <Box paddingBlockStart="400">
-              <Card>
-                <Box padding="400">
-                  <div style={{ textAlign: 'center' }}>
-                    <Button
-                      variant="primary"
-                      size="large"
-                      url="/app"
-                    >
-                      🎯 Go to Dashboard
-                    </Button>
-                    <Box paddingBlockStart="300">
-                      <Text variant="bodySm" tone="subdued" as="p">
-                        Start managing your loyalty program
+            {state.programLaunched && (
+              <>
+                <Box paddingBlockStart="400">
+                  <Card>
+                    <Box padding="400">
+                      <Text variant="headingMd" as="h3">
+                        What's Next?
                       </Text>
+                      <Box paddingBlockStart="400">
+                        <div style={{ display: 'grid', gap: '16px' }}>
+                          <div style={{
+                            padding: '16px',
+                            background: '#f8fafc',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0'
+                          }}>
+                            <Text variant="bodyMd" fontWeight="semibold" as="p">
+                              📊 Monitor Performance
+                            </Text>
+                            <Text variant="bodyMd" as="p">
+                              Track customer engagement, point redemptions, and program ROI in your dashboard.
+                            </Text>
+                          </div>
+
+                          <div style={{
+                            padding: '16px',
+                            background: '#f8fafc',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0'
+                          }}>
+                            <Text variant="bodyMd" fontWeight="semibold" as="p">
+                              📧 Customer Communication
+                            </Text>
+                            <Text variant="bodyMd" as="p">
+                              Promote your new loyalty program through email newsletters and social media.
+                            </Text>
+                          </div>
+
+                          <div style={{
+                            padding: '16px',
+                            background: '#f8fafc',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0'
+                          }}>
+                            <Text variant="bodyMd" fontWeight="semibold" as="p">
+                              🔧 Customize Further
+                            </Text>
+                            <Text variant="bodyMd" as="p">
+                              Fine-tune rewards, adjust earning rates, and experiment with seasonal promotions.
+                            </Text>
+                          </div>
+                        </div>
+                      </Box>
                     </Box>
-                  </div>
+                  </Card>
                 </Box>
-              </Card>
-            </Box>
+
+                <Box paddingBlockStart="400">
+                  <Card>
+                    <Box padding="400">
+                      <Text variant="headingMd" as="h3">
+                        Quick Stats
+                      </Text>
+                      <Box paddingBlockStart="400">
+                        <Box
+                          padding="400"
+                          background="bg-surface-secondary"
+                          borderRadius="200"
+                        >
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', textAlign: 'center' }}>
+                            <div>
+                              <Text variant="headingMd" as="p">
+                                {state.rewardTiers.length}
+                              </Text>
+                              <Text variant="bodySm" tone="subdued" as="p">
+                                Reward Tiers
+                              </Text>
+                            </div>
+                            <div>
+                              <Text variant="headingMd" as="p">
+                                {state.signupBonus}
+                              </Text>
+                              <Text variant="bodySm" tone="subdued" as="p">
+                                Welcome Bonus
+                              </Text>
+                            </div>
+                            <div>
+                              <Text variant="headingMd" as="p">
+                                {state.pointsPerDollar}x
+                              </Text>
+                              <Text variant="bodySm" tone="subdued" as="p">
+                                Earning Rate
+                              </Text>
+                            </div>
+                            <div>
+                              <Text variant="headingMd" as="p">
+                                {[state.enableWelcomeEmail, state.enablePointsEarnedEmail, state.enableRewardAvailableEmail].filter(Boolean).length}
+                              </Text>
+                              <Text variant="bodySm" tone="subdued" as="p">
+                                Email Types
+                              </Text>
+                            </div>
+                          </div>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Box>
+              </>
+            )}
           </Box>
         );
 
@@ -1709,13 +1711,32 @@ export function SimpleSetupWizard() {
                   </Box>
                   <Box>
                     <ButtonGroup>
-                      <Button
-                        variant="primary"
-                        onClick={nextStep}
-                        disabled={errors.length > 0}
-                      >
-                        {isLastStep ? '🚀 Launch Program' : 'Continue'}
-                      </Button>
+                      {isLastStep ? (
+                        !state.programLaunched ? (
+                          <Button
+                            variant="primary"
+                            onClick={launchProgram}
+                            disabled={errors.length > 0}
+                          >
+                            🚀 Launch Program
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="primary"
+                            url="/app"
+                          >
+                            🎯 Go to Dashboard
+                          </Button>
+                        )
+                      ) : (
+                        <Button
+                          variant="primary"
+                          onClick={nextStep}
+                          disabled={errors.length > 0}
+                        >
+                          Continue
+                        </Button>
+                      )}
                     </ButtonGroup>
                   </Box>
                 </div>
