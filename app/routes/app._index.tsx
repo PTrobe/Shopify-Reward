@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, Link } from "@remix-run/react";
+import { useLoaderData, useLocation } from "@remix-run/react";
 import { useState } from "react";
 import {
   Page,
@@ -41,6 +41,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export default function App() {
   const { shop, shopInfo } = useLoaderData<typeof loader>();
+  const location = useLocation();
   const [toastActive, setToastActive] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
@@ -107,7 +108,7 @@ export default function App() {
                 <ButtonGroup>
                   <Button
                     variant="primary"
-                    url="/app/setup"
+                    url={`/app/setup${location.search || ""}`}
                   >
                     Start Setup
                   </Button>
