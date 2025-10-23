@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useLocation } from '@remix-run/react';
 import {
   Page,
   Layout,
@@ -85,6 +86,7 @@ const PROGRAM_TYPE_OPTIONS = [
 const TOTAL_STEPS = 8;
 
 export function SimpleSetupWizard() {
+  const location = useLocation();
   const [state, setState] = useState<WizardState>({
     step: 1,
     programName: '',
@@ -1775,7 +1777,7 @@ export function SimpleSetupWizard() {
                         ) : (
                           <Button
                             variant="primary"
-                            url="/app"
+                            url={`/app${location.search || ""}`}
                           >
                             🎯 Go to Dashboard
                           </Button>
