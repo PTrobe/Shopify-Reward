@@ -4,7 +4,7 @@
  * A working setup wizard that demonstrates the infrastructure
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Page,
   Layout,
@@ -147,11 +147,29 @@ export function SimpleSetupWizard() {
   });
 
   const [errors, setErrors] = useState<string[]>([]);
-  const [availableThemes, setAvailableThemes] = useState<Array<{id: string, name: string, role: string}>>([
-    { id: 'dawn', name: 'Dawn', role: 'main' },
-    { id: 'refresh', name: 'Refresh', role: 'unpublished' },
-    { id: 'studio', name: 'Studio', role: 'unpublished' }
-  ]);
+  const [availableThemes, setAvailableThemes] = useState<Array<{id: string, name: string, role: string}>>([]);
+
+  // Fetch real themes when component mounts
+  useEffect(() => {
+    const fetchThemes = async () => {
+      try {
+        const response = await fetch('/api/admin/theme');
+        const result = await response.json();
+        if (result.themes) {
+          setAvailableThemes(result.themes);
+        }
+      } catch (error) {
+        console.error('Failed to fetch themes:', error);
+        // Fallback to mock themes
+        setAvailableThemes([
+          { id: 'dawn', name: 'Dawn', role: 'main' },
+          { id: 'refresh', name: 'Refresh', role: 'unpublished' }
+        ]);
+      }
+    };
+
+    fetchThemes();
+  }, []);
 
   // Validation function that can be called anytime
   const validateCurrentStep = (currentState: WizardState): string[] => {
@@ -298,24 +316,58 @@ export function SimpleSetupWizard() {
   };
 
   const installThemeBlocks = async () => {
-    // Simulate theme installation process
+    // Start installation process
     const newState = { ...state, installationStatus: 'installing' as const };
     setState(newState);
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // First get available themes
+      const themesResponse = await fetch('/api/admin/theme');
+      const themesData = await themesResponse.json();
 
-      // Simulate successful installation
-      const completedState = { ...state, installationStatus: 'complete' as const };
-      setState(completedState);
+      if (!themesResponse.ok) {
+        throw new Error('Failed to fetch themes');
+      }
 
-      // Auto-advance to next step after installation
-      setTimeout(() => {
-        setState(prev => ({ ...prev, step: Math.min(prev.step + 1, TOTAL_STEPS) }));
-      }, 1000);
+      // Find the selected theme or use the main theme
+      const selectedTheme = themesData.themes.find((theme: any) =>
+        theme.id.toString() === state.selectedTheme || theme.role === 'main'
+      );
+
+      if (!selectedTheme) {
+        throw new Error('No suitable theme found');
+      }
+
+      // Install the theme blocks using form data
+      const formData = new FormData();
+      formData.append('action', 'install_all');
+      formData.append('themeId', selectedTheme.id.toString());
+
+      const response = await fetch('/api/admin/theme', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Installation successful
+        const completedState = { ...state, installationStatus: 'complete' as const };
+        setState(completedState);
+
+        // Auto-advance to next step after installation
+        setTimeout(() => {
+          setState(prev => ({ ...prev, step: Math.min(prev.step + 1, TOTAL_STEPS) }));
+        }, 2000);
+      } else {
+        // Installation failed
+        console.error('Theme installation failed:', result);
+        const errorState = { ...state, installationStatus: 'error' as const };
+        setState(errorState);
+      }
 
     } catch (error) {
+      console.error('Theme installation error:', error);
       const errorState = { ...state, installationStatus: 'error' as const };
       setState(errorState);
     }

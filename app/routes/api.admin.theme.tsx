@@ -87,7 +87,7 @@ async function installHeaderBlock(admin: any, session: any, themeId: string) {
 
 {% comment %} Get customer points from app API {% endcomment %}
 {% if customer_id %}
-  {% assign api_url = 'https://shopify-reward-production.up.railway.app/apps/loyco-rewards/api/customer/' | append: customer_id | append: '/status' %}
+  {% assign api_url = 'https://shopify-reward-production.up.railway.app/apps/loyco-rewards/api/customer/' | append: customer_id | append: '/points' %}
   {% capture points_fetch %}{{ api_url }}{% endcapture %}
   {% comment %} Use JavaScript for dynamic loading {% endcomment %}
 {% endif %}
@@ -130,7 +130,7 @@ async function installHeaderBlock(admin: any, session: any, themeId: string) {
   const customerId = pointsEl?.getAttribute('data-customer-id');
 
   if (customerId && pointsEl) {
-    fetch('https://shopify-reward-production.up.railway.app/apps/loyco-rewards/api/customer/' + customerId + '/status')
+    fetch('/apps/loyco-rewards/api/customer/' + customerId + '/points')
       .then(response => response.json())
       .then(data => {
         if (data.points !== undefined) {
@@ -187,6 +187,62 @@ async function installHeaderBlock(admin: any, session: any, themeId: string) {
     value: headerBlockLiquid,
   });
 
+  // Now inject the snippet into the theme layout
+  try {
+    // Get the current theme.liquid file
+    const themeAsset = await admin.rest.resources.Asset.all({
+      session,
+      theme_id: themeId,
+      asset: { key: "layout/theme.liquid" },
+    });
+
+    if (themeAsset.data && themeAsset.data[0]) {
+      let themeContent = themeAsset.data[0].value;
+
+      // Check if our snippet is already included
+      if (!themeContent.includes('loyco-header-points')) {
+        // Find a good place to insert our header points - typically after site-nav or header
+        const insertPatterns = [
+          /<\/header>/i,
+          /<\/nav>/i,
+          /{%\s*section\s*'header'\s*%}/i,
+          /{%\s*render\s*'header'\s*%}/i,
+          /<body[^>]*>/i
+        ];
+
+        let inserted = false;
+        for (const pattern of insertPatterns) {
+          if (pattern.test(themeContent)) {
+            themeContent = themeContent.replace(pattern, (match) => {
+              return match + '\n{% render "loyco-header-points" %}';
+            });
+            inserted = true;
+            break;
+          }
+        }
+
+        // If no suitable location found, add it right after <body>
+        if (!inserted) {
+          themeContent = themeContent.replace(/<body[^>]*>/i, (match) => {
+            return match + '\n{% render "loyco-header-points" %}';
+          });
+        }
+
+        // Save the updated theme.liquid
+        await admin.rest.resources.Asset.save({
+          session,
+          theme_id: themeId,
+          key: "layout/theme.liquid",
+          value: themeContent,
+        });
+
+        console.log("Header block injected into theme.liquid successfully");
+      }
+    }
+  } catch (error) {
+    console.error("Error injecting header block into theme:", error);
+  }
+
   console.log("Header block installed successfully");
 }
 
@@ -211,7 +267,7 @@ async function installCustomerPage(admin: any, session: any, themeId: string) {
     <script>
       const customerId = '{{ customer.id }}';
       if (customerId) {
-        fetch('https://shopify-reward-production.up.railway.app/apps/loyco-rewards/api/customer/' + customerId + '/status')
+        fetch('/apps/loyco-rewards/api/customer/' + customerId + '/points')
           .then(response => response.json())
           .then(data => {
             document.querySelector('.points').textContent = data.points || 0;
