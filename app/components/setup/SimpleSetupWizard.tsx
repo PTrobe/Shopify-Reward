@@ -122,36 +122,36 @@ export function SimpleSetupWizard() {
 
   const [errors, setErrors] = useState<string[]>([]);
 
-  const nextStep = () => {
-    // Validate current step
+  // Validation function that can be called anytime
+  const validateCurrentStep = (currentState: WizardState): string[] => {
     const newErrors: string[] = [];
 
-    if (state.step === 1) {
-      if (!state.programName.trim()) {
+    if (currentState.step === 1) {
+      if (!currentState.programName.trim()) {
         newErrors.push('Program name is required');
       }
-      if (state.programName.length > 50) {
+      if (currentState.programName.length > 50) {
         newErrors.push('Program name must be 50 characters or less');
       }
     }
 
-    if (state.step === 2) {
-      if (state.pointsPerDollar <= 0) {
+    if (currentState.step === 2) {
+      if (currentState.pointsPerDollar <= 0) {
         newErrors.push('Points per dollar must be greater than 0');
       }
-      if (state.minimumRedemption <= 0) {
+      if (currentState.minimumRedemption <= 0) {
         newErrors.push('Minimum redemption must be greater than 0');
       }
-      if (state.signupBonus < 0) {
+      if (currentState.signupBonus < 0) {
         newErrors.push('Signup bonus cannot be negative');
       }
     }
 
-    if (state.step === 3) {
-      if (state.rewardTiers.length === 0) {
+    if (currentState.step === 3) {
+      if (currentState.rewardTiers.length === 0) {
         newErrors.push('At least one reward tier is required');
       }
-      state.rewardTiers.forEach((tier, index) => {
+      currentState.rewardTiers.forEach((tier, index) => {
         if (!tier.name.trim()) {
           newErrors.push(`Reward tier ${index + 1} name is required`);
         }
@@ -164,14 +164,20 @@ export function SimpleSetupWizard() {
       });
     }
 
-    if (state.step === 4) {
-      if (!state.primaryColor || !state.primaryColor.startsWith('#')) {
+    if (currentState.step === 4) {
+      if (!currentState.primaryColor || !currentState.primaryColor.startsWith('#')) {
         newErrors.push('Primary color must be a valid hex color');
       }
-      if (!state.secondaryColor || !state.secondaryColor.startsWith('#')) {
+      if (!currentState.secondaryColor || !currentState.secondaryColor.startsWith('#')) {
         newErrors.push('Secondary color must be a valid hex color');
       }
     }
+
+    return newErrors;
+  };
+
+  const nextStep = () => {
+    const newErrors = validateCurrentStep(state);
 
     if (newErrors.length > 0) {
       setErrors(newErrors);
@@ -187,8 +193,11 @@ export function SimpleSetupWizard() {
   };
 
   const updateField = (field: keyof WizardState, value: string | number | boolean) => {
-    setState(prev => ({ ...prev, [field]: value }));
-    setErrors([]); // Clear errors when user starts typing
+    const newState = { ...state, [field]: value };
+    setState(newState);
+    // Real-time validation: check if current errors are still valid
+    const currentErrors = validateCurrentStep(newState);
+    setErrors(currentErrors);
   };
 
   const updateNumberField = (field: keyof WizardState, value: string) => {
@@ -197,13 +206,16 @@ export function SimpleSetupWizard() {
   };
 
   const updateRewardTier = (index: number, field: keyof RewardTier, value: string | number) => {
-    setState(prev => ({
-      ...prev,
-      rewardTiers: prev.rewardTiers.map((tier, i) =>
+    const newState = {
+      ...state,
+      rewardTiers: state.rewardTiers.map((tier, i) =>
         i === index ? { ...tier, [field]: value } : tier
       )
-    }));
-    setErrors([]);
+    };
+    setState(newState);
+    // Real-time validation: check if current errors are still valid
+    const currentErrors = validateCurrentStep(newState);
+    setErrors(currentErrors);
   };
 
   const addRewardTier = () => {
@@ -215,17 +227,25 @@ export function SimpleSetupWizard() {
       discountValue: 5,
       description: ''
     };
-    setState(prev => ({
-      ...prev,
-      rewardTiers: [...prev.rewardTiers, newTier]
-    }));
+    const newState = {
+      ...state,
+      rewardTiers: [...state.rewardTiers, newTier]
+    };
+    setState(newState);
+    // Real-time validation: check if current errors are still valid
+    const currentErrors = validateCurrentStep(newState);
+    setErrors(currentErrors);
   };
 
   const removeRewardTier = (index: number) => {
-    setState(prev => ({
-      ...prev,
-      rewardTiers: prev.rewardTiers.filter((_, i) => i !== index)
-    }));
+    const newState = {
+      ...state,
+      rewardTiers: state.rewardTiers.filter((_, i) => i !== index)
+    };
+    setState(newState);
+    // Real-time validation: check if current errors are still valid
+    const currentErrors = validateCurrentStep(newState);
+    setErrors(currentErrors);
   };
 
   const progress = (state.step / TOTAL_STEPS) * 100;
