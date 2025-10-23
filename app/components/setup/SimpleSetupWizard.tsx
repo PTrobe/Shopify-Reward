@@ -158,17 +158,28 @@ export function SimpleSetupWizard() {
   useEffect(() => {
     const fetchThemes = async () => {
       try {
+        console.log('🎨 Fetching themes from /api/admin/theme...');
         const response = await fetch('/api/admin/theme', {
           credentials: 'include',
         });
+
+        console.log('🎨 Theme API response status:', response.status, response.statusText);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
         const result = await response.json();
-        if (result.themes) {
+        console.log('🎨 Theme API result:', result);
+
+        if (result.themes && Array.isArray(result.themes)) {
           const normalizedThemes = result.themes.map((theme: any) => ({
             id: String(theme.id),
             name: theme.name,
             role: theme.role,
           }));
 
+          console.log('🎨 Normalized themes:', normalizedThemes);
           setAvailableThemes(normalizedThemes);
           setState((prev) => ({
             ...prev,
@@ -178,9 +189,12 @@ export function SimpleSetupWizard() {
               normalizedThemes[0]?.id ||
               '',
           }));
+        } else {
+          throw new Error('Invalid response format: missing or invalid themes array');
         }
       } catch (error) {
-        console.error('Failed to fetch themes:', error);
+        console.error('❌ Failed to fetch themes:', error);
+        console.log('🎨 Using fallback themes (Dawn, Refresh)...');
         // Fallback to mock themes
         const fallbackThemes = [
           { id: 'dawn', name: 'Dawn', role: 'main' },
@@ -363,9 +377,16 @@ export function SimpleSetupWizard() {
     }));
 
     try {
+      console.log('🛠️ Installing theme blocks...', { selectedThemeId, availableThemes });
+
       const formData = new FormData();
       formData.append('action', 'install_all');
       formData.append('themeId', selectedThemeId);
+
+      console.log('🛠️ Sending POST request to /api/admin/theme with:', {
+        action: 'install_all',
+        themeId: selectedThemeId
+      });
 
       const response = await fetch('/api/admin/theme', {
         method: 'POST',
@@ -373,7 +394,10 @@ export function SimpleSetupWizard() {
         credentials: 'include',
       });
 
+      console.log('🛠️ Installation API response status:', response.status, response.statusText);
+
       const result = await response.json();
+      console.log('🛠️ Installation API result:', result);
 
       if (response.ok && result?.success) {
         setState((prev) => ({
