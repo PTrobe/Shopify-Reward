@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from '@remix-run/react';
+import { useLocation, useNavigate, useLoaderData, useFetcher } from '@remix-run/react';
 import {
   Page,
   Layout,
@@ -89,6 +89,9 @@ const TOTAL_STEPS = 8;
 export function SimpleSetupWizard() {
   const location = useLocation();
   const navigate = useNavigate();
+  const loaderData = useLoaderData<{ shop: string; themes: Array<{id: string, name: string, role: string}> }>();
+  const fetcher = useFetcher();
+
   const [state, setState] = useState<WizardState>({
     step: 1,
     programName: '',
@@ -152,68 +155,26 @@ export function SimpleSetupWizard() {
   });
 
   const [errors, setErrors] = useState<string[]>([]);
-  const [availableThemes, setAvailableThemes] = useState<Array<{id: string, name: string, role: string}>>([]);
 
-  // Fetch real themes when component mounts
+  // Use themes from server-side loader
+  const availableThemes = loaderData.themes;
+
+  // Set initial theme selection when themes are loaded
   useEffect(() => {
-    const fetchThemes = async () => {
-      try {
-        console.log('🎨 Fetching themes from /api/admin/theme...');
-        const response = await fetch('/api/admin/theme', {
-          credentials: 'include',
-        });
+    console.log('🎨 Themes loaded from server:', availableThemes);
 
-        console.log('🎨 Theme API response status:', response.status, response.statusText);
+    if (availableThemes.length > 0 && !state.selectedTheme) {
+      const mainTheme = availableThemes.find((theme) => theme.role === 'main');
+      const selectedThemeId = mainTheme?.id || availableThemes[0]?.id || '';
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+      console.log('🎨 Auto-selecting theme:', selectedThemeId, mainTheme);
 
-        const result = await response.json();
-        console.log('🎨 Theme API result:', result);
-
-        if (result.themes && Array.isArray(result.themes)) {
-          const normalizedThemes = result.themes.map((theme: any) => ({
-            id: String(theme.id),
-            name: theme.name,
-            role: theme.role,
-          }));
-
-          console.log('🎨 Normalized themes:', normalizedThemes);
-          setAvailableThemes(normalizedThemes);
-          setState((prev) => ({
-            ...prev,
-            selectedTheme:
-              prev.selectedTheme ||
-              normalizedThemes.find((theme) => theme.role === 'main')?.id ||
-              normalizedThemes[0]?.id ||
-              '',
-          }));
-        } else {
-          throw new Error('Invalid response format: missing or invalid themes array');
-        }
-      } catch (error) {
-        console.error('❌ Failed to fetch themes:', error);
-        console.log('🎨 Using fallback themes (Dawn, Refresh)...');
-        // Fallback to mock themes
-        const fallbackThemes = [
-          { id: 'dawn', name: 'Dawn', role: 'main' },
-          { id: 'refresh', name: 'Refresh', role: 'unpublished' },
-        ];
-        setAvailableThemes(fallbackThemes);
-        setState((prev) => ({
-          ...prev,
-          selectedTheme:
-            prev.selectedTheme ||
-            fallbackThemes.find((theme) => theme.role === 'main')?.id ||
-            fallbackThemes[0]?.id ||
-            '',
-        }));
-      }
-    };
-
-    fetchThemes();
-  }, []);
+      setState((prev) => ({
+        ...prev,
+        selectedTheme: selectedThemeId,
+      }));
+    }
+  }, [availableThemes, state.selectedTheme]);
 
   // Validation function that can be called anytime
   const validateCurrentStep = (currentState: WizardState): string[] => {
@@ -359,7 +320,7 @@ export function SimpleSetupWizard() {
     setErrors(currentErrors);
   };
 
-  const installThemeBlocks = async () => {
+  const installThemeBlocks = () => {
     const selectedThemeId =
       state.selectedTheme ||
       availableThemes.find((theme) => theme.role === 'main')?.id ||
@@ -370,41 +331,37 @@ export function SimpleSetupWizard() {
       return;
     }
 
+    console.log('🛠️ Installing theme blocks using Remix fetcher...', { selectedThemeId, availableThemes });
+
     setState((prev) => ({
       ...prev,
       installationStatus: 'installing',
       installationMessage: '',
     }));
 
-    try {
-      console.log('🛠️ Installing theme blocks...', { selectedThemeId, availableThemes });
+    // Use Remix fetcher for server-side action
+    const formData = new FormData();
+    formData.append('action', 'install_all');
+    formData.append('themeId', selectedThemeId);
 
-      const formData = new FormData();
-      formData.append('action', 'install_all');
-      formData.append('themeId', selectedThemeId);
+    console.log('🛠️ Submitting to setup action with:', {
+      action: 'install_all',
+      themeId: selectedThemeId
+    });
 
-      console.log('🛠️ Sending POST request to /api/admin/theme with:', {
-        action: 'install_all',
-        themeId: selectedThemeId
-      });
+    fetcher.submit(formData, { method: 'post' });
+  };
 
-      const response = await fetch('/api/admin/theme', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
+  // Handle fetcher response
+  useEffect(() => {
+    if (fetcher.state === 'idle' && fetcher.data) {
+      console.log('🛠️ Fetcher response:', fetcher.data);
 
-      console.log('🛠️ Installation API response status:', response.status, response.statusText);
-
-      const result = await response.json();
-      console.log('🛠️ Installation API result:', result);
-
-      if (response.ok && result?.success) {
+      if (fetcher.data.success) {
         setState((prev) => ({
           ...prev,
-          selectedTheme: selectedThemeId,
           installationStatus: 'complete',
-          installationMessage: result.message || 'Loyalty blocks installed successfully.',
+          installationMessage: fetcher.data.message || 'Loyalty blocks installed successfully.',
         }));
 
         setTimeout(() => {
@@ -414,24 +371,20 @@ export function SimpleSetupWizard() {
           }));
         }, 1800);
       } else {
-        const message =
-          result?.error || result?.message || 'Theme installation failed. Please try again.';
-        console.error('Theme installation failed:', result);
+        const message = fetcher.data.error || 'Theme installation failed. Please try again.';
+        console.error('Theme installation failed:', fetcher.data);
         setState((prev) => ({
           ...prev,
           installationStatus: 'error',
           installationMessage: message,
         }));
       }
-    } catch (error) {
-      console.error('Theme installation error:', error);
-      setState((prev) => ({
-        ...prev,
-        installationStatus: 'error',
-        installationMessage: 'Unexpected error while installing loyalty blocks.',
-      }));
+    } else if (fetcher.state === 'idle' && fetcher.data === undefined) {
+      // Initial state, do nothing
+    } else if (fetcher.state === 'submitting' || fetcher.state === 'loading') {
+      console.log('🛠️ Fetcher state:', fetcher.state);
     }
-  };
+  }, [fetcher.state, fetcher.data]);
 
   const launchProgram = () => {
     // Mark program as launched
