@@ -1,0 +1,263 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+
+type AdminApi = {
+  rest: {
+    resources: {
+      Asset: {
+        all: (params: Record<string, any>) => Promise<{ data?: Array<{ value?: string }> }>;
+        save: (params: Record<string, any>) => Promise<void>;
+        delete: (params: Record<string, any>) => Promise<void>;
+      };
+      Theme: {
+        find: (params: Record<string, any>) => Promise<{ data?: any }>;
+      };
+    };
+  };
+};
+
+export type ThemeInstallResult = {
+  success: boolean;
+  message: string;
+  details?: Record<string, any>;
+};
+
+interface InstallOptions {
+  admin: AdminApi;
+  session: any;
+  themeId: string;
+}
+
+const HEADER_SNIPPET_KEY = "snippets/loyco-header-points.liquid";
+const CUSTOMER_TEMPLATE_KEY = "templates/customers/loyalty.liquid";
+const THEME_LAYOUT_KEY = "layout/theme.liquid";
+const HEADER_MARKER_START = "{% comment %} Loyco Rewards header points start {% endcomment %}";
+const HEADER_MARKER_END = "{% comment %} Loyco Rewards header points end {% endcomment %}";
+
+const assetPath = (relativePath: string) =>
+  path.resolve(process.cwd(), "app", "theme", relativePath);
+
+async function readAssetFromDisk(relativePath: string) {
+  return fs.readFile(assetPath(relativePath), "utf-8");
+}
+
+async function fetchAsset(admin: AdminApi, session: any, themeId: string, key: string) {
+  try {
+    const response = await admin.rest.resources.Asset.all({
+      session,
+      theme_id: themeId,
+      asset: { key },
+    });
+
+    return response?.data?.[0]?.value ?? null;
+  } catch (error) {
+    console.warn(`Loyco: unable to fetch asset ${key}`, error);
+    return null;
+  }
+}
+
+async function upsertAsset(
+  admin: AdminApi,
+  session: any,
+  themeId: string,
+  key: string,
+  value: string,
+) {
+  await admin.rest.resources.Asset.save({
+    session,
+    theme_id: themeId,
+    key,
+    value,
+  });
+}
+
+async function backupAsset(
+  admin: AdminApi,
+  session: any,
+  themeId: string,
+  key: string,
+  backupSuffix = ".loyco-backup",
+) {
+  const existingValue = await fetchAsset(admin, session, themeId, key);
+  if (!existingValue) {
+    return;
+  }
+
+  const backupKey = `${key}${backupSuffix}`;
+  const backupExists = await fetchAsset(admin, session, themeId, backupKey);
+  if (backupExists) {
+    return;
+  }
+
+  await upsertAsset(admin, session, themeId, backupKey, existingValue);
+}
+
+function injectHeaderSnippet(layout: string) {
+  if (layout.includes(HEADER_MARKER_START)) {
+    return layout;
+  }
+
+  const injectionBlock = [
+    HEADER_MARKER_START,
+    "{% render \"loyco-header-points\" %}",
+    HEADER_MARKER_END,
+  ].join("\n");
+
+  const insertionPatterns = [
+    /{%\s*section\s*['"]header['"]\s*%}/i,
+    /{%\s*render\s*['"]header['"]\s*%}/i,
+    /<\/header[^>]*>/i,
+    /<\/nav[^>]*>/i,
+    /<body[^>]*>/i,
+  ];
+
+  for (const pattern of insertionPatterns) {
+    if (pattern.test(layout)) {
+      return layout.replace(pattern, (match) => `${match}\n${injectionBlock}`);
+    }
+  }
+
+  return `${injectionBlock}\n${layout}`;
+}
+
+function removeHeaderInjection(layout: string) {
+  const markerRegex = new RegExp(
+    `${HEADER_MARKER_START.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}[\\s\\S]*?${HEADER_MARKER_END.replace(
+      /[.*+?^${}()|[\\]\\\\]/g,
+      "\\$&",
+    )}`,
+    "g",
+  );
+  return layout.replace(markerRegex, "").trim();
+}
+
+export class ThemeInstaller {
+  private admin: AdminApi;
+  private session: any;
+  private themeId: string;
+
+  constructor({ admin, session, themeId }: InstallOptions) {
+    this.admin = admin;
+    this.session = session;
+    this.themeId = themeId;
+  }
+
+  async installHeaderBlock(): Promise<ThemeInstallResult> {
+    const snippetContent = await readAssetFromDisk("snippets/loyco-header-points.liquid");
+    await upsertAsset(this.admin, this.session, this.themeId, HEADER_SNIPPET_KEY, snippetContent);
+
+    const layoutContent = await fetchAsset(
+      this.admin,
+      this.session,
+      this.themeId,
+      THEME_LAYOUT_KEY,
+    );
+
+    if (!layoutContent) {
+      return {
+        success: false,
+        message: "Unable to locate layout/theme.liquid on the selected theme.",
+      };
+    }
+
+    await backupAsset(this.admin, this.session, this.themeId, THEME_LAYOUT_KEY);
+
+    const updatedLayout = injectHeaderSnippet(layoutContent);
+    if (updatedLayout === layoutContent) {
+      return {
+        success: true,
+        message: "Header block already installed.",
+      };
+    }
+
+    await upsertAsset(this.admin, this.session, this.themeId, THEME_LAYOUT_KEY, updatedLayout);
+
+    return {
+      success: true,
+      message: "Header block installed successfully.",
+    };
+  }
+
+  async installCustomerPage(): Promise<ThemeInstallResult> {
+    const templateContent = await readAssetFromDisk("templates/customers.loyalty.liquid");
+    await upsertAsset(
+      this.admin,
+      this.session,
+      this.themeId,
+      CUSTOMER_TEMPLATE_KEY,
+      templateContent,
+    );
+
+    return {
+      success: true,
+      message: "Customer loyalty page installed successfully.",
+    };
+  }
+
+  async installAll(): Promise<ThemeInstallResult> {
+    const headerResult = await this.installHeaderBlock();
+    const pageResult = await this.installCustomerPage();
+
+    const successes = [headerResult, pageResult].filter((result) => result.success);
+    const errors = [headerResult, pageResult].filter((result) => !result.success);
+
+    if (errors.length) {
+      return {
+        success: false,
+        message: errors.map((error) => error.message).join(" "),
+        details: { successes, errors },
+      };
+    }
+
+    return {
+      success: true,
+      message: "All loyalty blocks installed successfully.",
+      details: { header: headerResult, customerPage: pageResult },
+    };
+  }
+
+  async uninstallAll(): Promise<ThemeInstallResult> {
+    const layoutContent = await fetchAsset(
+      this.admin,
+      this.session,
+      this.themeId,
+      THEME_LAYOUT_KEY,
+    );
+
+    if (layoutContent) {
+      const cleanedLayout = removeHeaderInjection(layoutContent);
+      await upsertAsset(this.admin, this.session, this.themeId, THEME_LAYOUT_KEY, cleanedLayout);
+    }
+
+    await Promise.all([
+      this.deleteAssetSafely(HEADER_SNIPPET_KEY),
+      this.deleteAssetSafely(CUSTOMER_TEMPLATE_KEY),
+    ]);
+
+    return {
+      success: true,
+      message: "Loyco Rewards blocks removed from theme.",
+    };
+  }
+
+  private async deleteAssetSafely(key: string) {
+    try {
+      await this.admin.rest.resources.Asset.delete({
+        session: this.session,
+        theme_id: this.themeId,
+        asset: { key },
+      });
+    } catch (error) {
+      console.warn(`Loyco: attempted to remove missing asset ${key}`, error);
+    }
+  }
+}
+
+export async function loadThemeName(admin: AdminApi, session: any, themeId: string) {
+  const theme = await admin.rest.resources.Theme.find({
+    session,
+    id: themeId,
+  });
+
+  return theme?.data?.name ?? "Selected theme";
+}

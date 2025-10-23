@@ -1,0 +1,225 @@
+{% comment %}
+  Loyco Rewards - Customer Loyalty Page
+  Displays current customer points and basic program information.
+  Path: /account/loyalty (requires Online Store 2.0 template support)
+{% endcomment %}
+
+<div class="loyco-loyalty-page">
+  <div class="loyco-loyalty-page__hero">
+    <span class="loyco-loyalty-page__icon" aria-hidden="true">★</span>
+    <h1 class="loyco-loyalty-page__title">Your Loyalty Rewards</h1>
+    <p class="loyco-loyalty-page__subtitle">Track your points and unlock exclusive rewards</p>
+  </div>
+
+  {% if customer %}
+    <section class="loyco-loyalty-page__card">
+      <header class="loyco-loyalty-page__card-header">
+        <h2>Points balance</h2>
+      </header>
+
+      <div class="loyco-loyalty-page__card-body">
+        <div class="loyco-loyalty-page__points">
+          <span class="loyco-loyalty-page__points-value" data-customer-id="{{ customer.id }}">0</span>
+          <span class="loyco-loyalty-page__points-label">points</span>
+        </div>
+
+        <dl class="loyco-loyalty-page__details">
+          <div>
+            <dt>Total earned</dt>
+            <dd class="loyco-loyalty-page__detail-value" data-loyco-detail="lifetime-points">0</dd>
+          </div>
+          <div>
+            <dt>Total redeemed</dt>
+            <dd class="loyco-loyalty-page__detail-value" data-loyco-detail="redeemed-points">0</dd>
+          </div>
+        </dl>
+
+        <footer class="loyco-loyalty-page__footer">
+          <p id="loyco-loyalty-page-status" class="loyco-loyalty-page__status">Fetching your latest activity…</p>
+        </footer>
+      </div>
+    </section>
+  {% else %}
+    <section class="loyco-loyalty-page__card loyco-loyalty-page__card--center">
+      <h2>Sign in to view your rewards</h2>
+      <p>You need to be logged in to check your points balance.</p>
+      <a class="loyco-loyalty-page__button" href="{{ routes.account_login_url }}">Sign in</a>
+    </section>
+  {% endif %}
+</div>
+
+{% if customer %}
+  <script>
+    (function() {
+      var customerId = '{{ customer.id }}';
+      if (!customerId) return;
+
+      var pointsEl = document.querySelector('.loyco-loyalty-page__points-value');
+      var statusEl = document.getElementById('loyco-loyalty-page-status');
+
+      fetch('/apps/loyco-rewards/api/customer/' + customerId + '/points', { credentials: 'include' })
+        .then(function(response) {
+          if (!response.ok) throw new Error('Request failed');
+          return response.json();
+        })
+        .then(function(data) {
+          if (!data) throw new Error('No data');
+          if (pointsEl) pointsEl.textContent = data.points ?? 0;
+
+          var lifetime = document.querySelector('[data-loyco-detail="lifetime-points"]');
+          if (lifetime && typeof data.lifetimePoints !== 'undefined') {
+            lifetime.textContent = data.lifetimePoints;
+          }
+
+          var redeemed = document.querySelector('[data-loyco-detail="redeemed-points"]');
+          if (redeemed && typeof data.redeemedPoints !== 'undefined') {
+            redeemed.textContent = data.redeemedPoints;
+          }
+
+          if (statusEl) statusEl.textContent = 'Balance updated';
+        })
+        .catch(function() {
+          if (statusEl) statusEl.textContent = 'We could not load your points right now. Please refresh.';
+        });
+    })();
+  </script>
+{% endif %}
+
+<style>
+  .loyco-loyalty-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 16px 64px;
+    color: #1f2933;
+    font-family: inherit;
+  }
+
+  .loyco-loyalty-page__hero {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .loyco-loyalty-page__icon {
+    display: inline-block;
+    font-size: 42px;
+    color: #f59e0b;
+    margin-bottom: 8px;
+  }
+
+  .loyco-loyalty-page__title {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 600;
+  }
+
+  .loyco-loyalty-page__subtitle {
+    margin-top: 8px;
+    color: #52606d;
+    font-size: 16px;
+  }
+
+  .loyco-loyalty-page__card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .loyco-loyalty-page__card--center {
+    padding: 32px;
+    text-align: center;
+  }
+
+  .loyco-loyalty-page__card-header {
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #fef3c7 0%, #ffe8a3 100%);
+    border-bottom: 1px solid rgba(254, 215, 102, 0.4);
+  }
+
+  .loyco-loyalty-page__card-header h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .loyco-loyalty-page__card-body {
+    padding: 32px 24px 24px;
+  }
+
+  .loyco-loyalty-page__points {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    align-items: baseline;
+    font-size: 48px;
+    color: #b7791f;
+    font-weight: 700;
+    margin-bottom: 24px;
+  }
+
+  .loyco-loyalty-page__points-label {
+    font-size: 16px;
+    color: #9aa5b1;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .loyco-loyalty-page__details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .loyco-loyalty-page__details > div {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .loyco-loyalty-page__details dt {
+    font-size: 13px;
+    color: #64748b;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .loyco-loyalty-page__detail-value {
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .loyco-loyalty-page__footer {
+    margin-top: 24px;
+    text-align: center;
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  .loyco-loyalty-page__button {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 10px 20px;
+    background: #111827;
+    color: #ffffff;
+    border-radius: 9999px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .loyco-loyalty-page__button:hover {
+    background: #000000;
+  }
+
+  @media (max-width: 600px) {
+    .loyco-loyalty-page__points {
+      font-size: 36px;
+    }
+
+    .loyco-loyalty-page__details {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

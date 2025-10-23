@@ -1,0 +1,83 @@
+{% comment %}
+  Loyco Rewards - Header Points Snippet
+  Adds a compact customer points badge to the storefront header.
+  Injected automatically by the app; safe to include only once.
+{% endcomment %}
+
+{% if customer %}
+  <div id="loyco-header-points" class="loyco-header-points" data-customer-id="{{ customer.id }}">
+    <span class="loyco-header-points__icon" aria-hidden="true">★</span>
+    <span class="loyco-header-points__count">0</span>
+  </div>
+
+  <script>
+    (function() {
+      try {
+        var container = document.getElementById('loyco-header-points');
+        if (!container) return;
+
+        var customerId = container.getAttribute('data-customer-id');
+        if (!customerId) return;
+
+        fetch('/apps/loyco-rewards/api/customer/' + customerId + '/points', { credentials: 'include' })
+          .then(function(response) {
+            if (!response.ok) throw new Error('Request failed');
+            return response.json();
+          })
+          .then(function(data) {
+            if (data && typeof data.points !== 'undefined') {
+              var countEl = container.querySelector('.loyco-header-points__count');
+              if (countEl) countEl.textContent = data.points;
+            }
+          })
+          .catch(function() {
+            console.warn('Loyco Rewards: Unable to load customer points');
+          });
+      } catch (error) {
+        console.warn('Loyco Rewards: Header points script error', error);
+      }
+    })();
+  </script>
+
+  <style>
+    #loyco-header-points.loyco-header-points {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 9999px;
+      background: rgba(255, 215, 0, 0.16);
+      color: #B8860B;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1;
+      transition: background 0.2s ease, transform 0.2s ease;
+      cursor: default;
+    }
+
+    #loyco-header-points.loyco-header-points:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 215, 0, 0.24);
+    }
+
+    .loyco-header-points__icon {
+      font-size: 14px;
+      color: #FFD700;
+    }
+
+    .loyco-header-points__count {
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 600px) {
+      #loyco-header-points.loyco-header-points {
+        padding: 3px 6px;
+        font-size: 11px;
+      }
+
+      .loyco-header-points__icon {
+        font-size: 12px;
+      }
+    }
+  </style>
+{% endif %}

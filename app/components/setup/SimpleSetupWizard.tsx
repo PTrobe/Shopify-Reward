@@ -60,6 +60,7 @@ interface WizardState {
   autoInstallBlocks: boolean;
   backupBeforeInstall: boolean;
   installationStatus: 'pending' | 'installing' | 'complete' | 'error';
+  installationMessage: string;
   // Email Notifications
   enableWelcomeEmail: boolean;
   enablePointsEarnedEmail: boolean;
@@ -139,6 +140,7 @@ export function SimpleSetupWizard() {
     autoInstallBlocks: true,
     backupBeforeInstall: true,
     installationStatus: 'pending',
+    installationMessage: '',
     // Email Notifications defaults
     enableWelcomeEmail: true,
     enablePointsEarnedEmail: true,
@@ -159,15 +161,38 @@ export function SimpleSetupWizard() {
         const response = await fetch('/api/admin/theme');
         const result = await response.json();
         if (result.themes) {
-          setAvailableThemes(result.themes);
+          const normalizedThemes = result.themes.map((theme: any) => ({
+            id: String(theme.id),
+            name: theme.name,
+            role: theme.role,
+          }));
+
+          setAvailableThemes(normalizedThemes);
+          setState((prev) => ({
+            ...prev,
+            selectedTheme:
+              prev.selectedTheme ||
+              normalizedThemes.find((theme) => theme.role === 'main')?.id ||
+              normalizedThemes[0]?.id ||
+              '',
+          }));
         }
       } catch (error) {
         console.error('Failed to fetch themes:', error);
         // Fallback to mock themes
-        setAvailableThemes([
+        const fallbackThemes = [
           { id: 'dawn', name: 'Dawn', role: 'main' },
-          { id: 'refresh', name: 'Refresh', role: 'unpublished' }
-        ]);
+          { id: 'refresh', name: 'Refresh', role: 'unpublished' },
+        ];
+        setAvailableThemes(fallbackThemes);
+        setState((prev) => ({
+          ...prev,
+          selectedTheme:
+            prev.selectedTheme ||
+            fallbackThemes.find((theme) => theme.role === 'main')?.id ||
+            fallbackThemes[0]?.id ||
+            '',
+        }));
       }
     };
 
@@ -319,32 +344,26 @@ export function SimpleSetupWizard() {
   };
 
   const installThemeBlocks = async () => {
-    // Start installation process
-    const newState = { ...state, installationStatus: 'installing' as const };
-    setState(newState);
+    const selectedThemeId =
+      state.selectedTheme ||
+      availableThemes.find((theme) => theme.role === 'main')?.id ||
+      availableThemes[0]?.id;
+
+    if (!selectedThemeId) {
+      setErrors(['No available theme to install into.']);
+      return;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      installationStatus: 'installing',
+      installationMessage: '',
+    }));
 
     try {
-      // First get available themes
-      const themesResponse = await fetch('/api/admin/theme');
-      const themesData = await themesResponse.json();
-
-      if (!themesResponse.ok) {
-        throw new Error('Failed to fetch themes');
-      }
-
-      // Find the selected theme or use the main theme
-      const selectedTheme = themesData.themes.find((theme: any) =>
-        theme.id.toString() === state.selectedTheme || theme.role === 'main'
-      );
-
-      if (!selectedTheme) {
-        throw new Error('No suitable theme found');
-      }
-
-      // Install the theme blocks using form data
       const formData = new FormData();
       formData.append('action', 'install_all');
-      formData.append('themeId', selectedTheme.id.toString());
+      formData.append('themeId', selectedThemeId);
 
       const response = await fetch('/api/admin/theme', {
         method: 'POST',
@@ -353,26 +372,37 @@ export function SimpleSetupWizard() {
 
       const result = await response.json();
 
-      if (response.ok && result.success) {
-        // Installation successful
-        const completedState = { ...state, installationStatus: 'complete' as const };
-        setState(completedState);
+      if (response.ok && result?.success) {
+        setState((prev) => ({
+          ...prev,
+          selectedTheme: selectedThemeId,
+          installationStatus: 'complete',
+          installationMessage: result.message || 'Loyalty blocks installed successfully.',
+        }));
 
-        // Auto-advance to next step after installation
         setTimeout(() => {
-          setState(prev => ({ ...prev, step: Math.min(prev.step + 1, TOTAL_STEPS) }));
-        }, 2000);
+          setState((prev) => ({
+            ...prev,
+            step: Math.min(prev.step + 1, TOTAL_STEPS),
+          }));
+        }, 1800);
       } else {
-        // Installation failed
+        const message =
+          result?.error || result?.message || 'Theme installation failed. Please try again.';
         console.error('Theme installation failed:', result);
-        const errorState = { ...state, installationStatus: 'error' as const };
-        setState(errorState);
+        setState((prev) => ({
+          ...prev,
+          installationStatus: 'error',
+          installationMessage: message,
+        }));
       }
-
     } catch (error) {
       console.error('Theme installation error:', error);
-      const errorState = { ...state, installationStatus: 'error' as const };
-      setState(errorState);
+      setState((prev) => ({
+        ...prev,
+        installationStatus: 'error',
+        installationMessage: 'Unexpected error while installing loyalty blocks.',
+      }));
     }
   };
 
@@ -1145,6 +1175,13 @@ export function SimpleSetupWizard() {
                                 Your loyalty program has been successfully installed to {availableThemes.find(t => t.id === state.selectedTheme)?.name}.
                               </Text>
                             </Box>
+                            {state.installationMessage && (
+                              <Box paddingBlockStart="200">
+                                <Text variant="bodySm" tone="subdued" as="p">
+                                  {state.installationMessage}
+                                </Text>
+                              </Box>
+                            )}
                             <Box paddingBlockStart="200">
                               <Text variant="bodyMd" tone="subdued" as="p">
                                 Advancing to email configuration...
@@ -1163,6 +1200,13 @@ export function SimpleSetupWizard() {
                                 There was an issue installing the loyalty program blocks.
                               </Text>
                             </Box>
+                            {state.installationMessage && (
+                              <Box paddingBlockStart="200">
+                                <Text variant="bodySm" tone="critical" as="p">
+                                  {state.installationMessage}
+                                </Text>
+                              </Box>
+                            )}
                             <Box paddingBlockStart="400">
                               <Button
                                 variant="primary"

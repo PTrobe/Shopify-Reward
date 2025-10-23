@@ -135,6 +135,15 @@ railway run npx prisma migrate deploy
 2. **Install App:** Use the installation URL from Partners Dashboard
 3. **Test App Proxy:** Visit `https://test-store.myshopify.com/apps/loyco-rewards/api/program`
 
+### Theme installer checklist
+
+The guided setup now includes a one-click theme installer backed by automated backups and idempotent updates. When testing:
+
+- From the app dashboard, open **Start Setup → Install loyalty blocks** and select the theme to patch.
+- Confirm the installer reports success and that `snippets/loyco-header-points.liquid` and `templates/customers/loyalty.liquid` were created in the theme.
+- Verify the header snippet appears only once in `layout/theme.liquid` between the `Loyco Rewards` comment markers.
+- If you need to revert, use the **Remove loyalty blocks** button—this restores the layout file to its pre-install state and removes the created assets.
+
 ## 🎯 Verification Checklist
 
 - [ ] Shopify app created in Partners Dashboard
