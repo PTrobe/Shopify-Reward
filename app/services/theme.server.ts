@@ -261,3 +261,59 @@ export async function loadThemeName(admin: AdminApi, session: any, themeId: stri
 
   return theme?.data?.name ?? "Selected theme";
 }
+
+export async function installAll(admin: AdminApi, session: any, themeId: string): Promise<ThemeInstallResult> {
+  try {
+    console.log(`🛠️ Starting theme installation for theme ID: ${themeId}`);
+
+    // 1. Load and install header snippet
+    console.log("📝 Installing header snippet...");
+    const headerSnippetContent = await readAssetFromDisk(HEADER_SNIPPET_KEY);
+    await upsertAsset(admin, session, themeId, HEADER_SNIPPET_KEY, headerSnippetContent);
+
+    // 2. Load and install customer template
+    console.log("📄 Installing customer loyalty template...");
+    const customerTemplateContent = await readAssetFromDisk(CUSTOMER_TEMPLATE_KEY);
+    await upsertAsset(admin, session, themeId, CUSTOMER_TEMPLATE_KEY, customerTemplateContent);
+
+    // 3. Backup and modify theme layout
+    console.log("🔧 Modifying theme layout...");
+
+    // Create backup of theme layout
+    await backupAsset(admin, session, themeId, THEME_LAYOUT_KEY);
+
+    // Get current layout
+    const currentLayout = await fetchAsset(admin, session, themeId, THEME_LAYOUT_KEY);
+    if (!currentLayout) {
+      throw new Error("Could not fetch theme layout file");
+    }
+
+    // Inject header snippet into layout
+    const modifiedLayout = injectHeaderSnippet(currentLayout);
+    await upsertAsset(admin, session, themeId, THEME_LAYOUT_KEY, modifiedLayout);
+
+    console.log("✅ Theme installation completed successfully");
+
+    return {
+      success: true,
+      message: "Loyalty blocks installed successfully. Header points will now appear in the storefront.",
+      details: {
+        themeId,
+        installedAssets: [HEADER_SNIPPET_KEY, CUSTOMER_TEMPLATE_KEY, THEME_LAYOUT_KEY],
+        backupCreated: true,
+      }
+    };
+
+  } catch (error) {
+    console.error("❌ Theme installation failed:", error);
+
+    return {
+      success: false,
+      message: `Installation failed: ${error instanceof Error ? error.message : String(error)}`,
+      details: {
+        themeId,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    };
+  }
+}
