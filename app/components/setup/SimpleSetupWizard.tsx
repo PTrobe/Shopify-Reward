@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, useLoaderData, useFetcher } from '@remix-run/react';
+import { useNavigate, useLoaderData, useFetcher } from '@remix-run/react';
 import {
   Page,
   Layout,
@@ -105,7 +105,6 @@ const PROGRAM_TYPE_OPTIONS = [
 const TOTAL_STEPS = 8;
 
 export function SimpleSetupWizard() {
-  const location = useLocation();
   const navigate = useNavigate();
   const loaderData = useLoaderData<SetupLoaderData>();
   const fetcher = useFetcher<ThemeActionResponse>();
@@ -357,16 +356,15 @@ export function SimpleSetupWizard() {
     }));
 
     // Use Remix fetcher for server-side action
-    const formData = new FormData();
-    formData.append('action', 'install_all');
-    formData.append('themeId', selectedThemeId);
-
     console.log('🛠️ Submitting to setup action with:', {
       action: 'install_all',
       themeId: selectedThemeId
     });
 
-    fetcher.submit(formData, { method: 'post', action: '/api/admin/theme' });
+    fetcher.submit(
+      { action: 'install_all', themeId: selectedThemeId },
+      { method: 'post', action: '/api/admin/theme' }
+    );
   };
 
   // Handle fetcher response
@@ -1819,7 +1817,7 @@ export function SimpleSetupWizard() {
                         ) : (
                           <Button
                             variant="primary"
-                            onClick={() => navigate(`/app${location.search || ""}`)}
+                            onClick={() => navigate('/app')}
                           >
                             🎯 Go to Dashboard
                           </Button>

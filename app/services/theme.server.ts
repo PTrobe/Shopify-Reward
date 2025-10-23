@@ -68,11 +68,21 @@ async function readAssetFromDisk(relativePath: string) {
   return fs.readFile(assetPath(relativePath), "utf-8");
 }
 
+function assertValidThemeId(themeId: string) {
+  const numericId = Number(themeId);
+  if (Number.isNaN(numericId)) {
+    throw new Error(`Invalid theme id "${themeId}"`);
+  }
+  return numericId;
+}
+
 async function fetchAsset(admin: AdminApi, session: any, themeId: string, key: string) {
   try {
+    const numericThemeId = assertValidThemeId(themeId);
+
     const response = await admin.rest.resources.Asset.all({
       session,
-      theme_id: themeId,
+      theme_id: numericThemeId,
       asset: { key },
     });
 
@@ -90,9 +100,11 @@ async function upsertAsset(
   key: string,
   value: string,
 ) {
+  const numericThemeId = assertValidThemeId(themeId);
+
   await admin.rest.resources.Asset.save({
     session,
-    theme_id: themeId,
+    theme_id: numericThemeId,
     key,
     value,
   });
@@ -105,6 +117,7 @@ async function backupAsset(
   key: string,
   backupSuffix = ".loyco-backup",
 ) {
+  const numericThemeId = assertValidThemeId(themeId);
   const existingValue = await fetchAsset(admin, session, themeId, key);
   if (!existingValue) {
     return;
@@ -116,7 +129,12 @@ async function backupAsset(
     return;
   }
 
-  await upsertAsset(admin, session, themeId, backupKey, existingValue);
+  await admin.rest.resources.Asset.save({
+    session,
+    theme_id: numericThemeId,
+    key: backupKey,
+    value: existingValue,
+  });
 }
 
 function injectHeaderSnippet(layout: string) {
@@ -231,8 +249,13 @@ export class ThemeInstaller {
 
   async installAll(): Promise<ThemeInstallResult> {
     try {
+      console.log(`[Loyco] Installing loyalty blocks for theme ${this.themeId}`);
+
       const headerResult = await this.installHeaderBlock();
+      console.log("[Loyco] Header block result:", headerResult);
+
       const pageResult = await this.installCustomerPage();
+      console.log("[Loyco] Customer page result:", pageResult);
 
       const successes = [headerResult, pageResult].filter((result) => result.success);
       const errors = [headerResult, pageResult].filter((result) => !result.success);
@@ -245,6 +268,7 @@ export class ThemeInstaller {
         };
       }
 
+      console.log("[Loyco] Loyalty blocks installed successfully.");
       return {
         success: true,
         message: "All loyalty blocks installed successfully.",
@@ -285,9 +309,10 @@ export class ThemeInstaller {
 
   private async deleteAssetSafely(key: string) {
     try {
+      const numericThemeId = assertValidThemeId(this.themeId);
       await this.admin.rest.resources.Asset.delete({
         session: this.session,
-        theme_id: this.themeId,
+        theme_id: numericThemeId,
         asset: { key },
       });
     } catch (error) {
@@ -297,9 +322,10 @@ export class ThemeInstaller {
 }
 
 export async function loadThemeName(admin: AdminApi, session: any, themeId: string) {
+  const numericThemeId = assertValidThemeId(themeId);
   const theme = await admin.rest.resources.Theme.find({
     session,
-    id: themeId,
+    id: numericThemeId,
   });
 
   return theme?.data?.name ?? "Selected theme";
