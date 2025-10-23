@@ -54,6 +54,17 @@ interface WizardState {
   showInHeader: boolean;
   showOnProductPage: boolean;
   showInCart: boolean;
+  // Theme Integration
+  selectedTheme: string;
+  autoInstallBlocks: boolean;
+  backupBeforeInstall: boolean;
+  installationStatus: 'pending' | 'installing' | 'complete' | 'error';
+  // Email Notifications
+  enableWelcomeEmail: boolean;
+  enablePointsEarnedEmail: boolean;
+  enableRewardAvailableEmail: boolean;
+  emailFromName: string;
+  emailFromAddress: string;
 }
 
 const CURRENCY_OPTIONS = [
@@ -118,9 +129,25 @@ export function SimpleSetupWizard() {
     showInHeader: true,
     showOnProductPage: true,
     showInCart: false,
+    // Theme Integration defaults
+    selectedTheme: '',
+    autoInstallBlocks: true,
+    backupBeforeInstall: true,
+    installationStatus: 'pending',
+    // Email Notifications defaults
+    enableWelcomeEmail: true,
+    enablePointsEarnedEmail: true,
+    enableRewardAvailableEmail: true,
+    emailFromName: '',
+    emailFromAddress: '',
   });
 
   const [errors, setErrors] = useState<string[]>([]);
+  const [availableThemes, setAvailableThemes] = useState<Array<{id: string, name: string, role: string}>>([
+    { id: 'dawn', name: 'Dawn', role: 'main' },
+    { id: 'refresh', name: 'Refresh', role: 'unpublished' },
+    { id: 'studio', name: 'Studio', role: 'unpublished' }
+  ]);
 
   // Validation function that can be called anytime
   const validateCurrentStep = (currentState: WizardState): string[] => {
@@ -170,6 +197,24 @@ export function SimpleSetupWizard() {
       }
       if (!currentState.secondaryColor || !currentState.secondaryColor.startsWith('#')) {
         newErrors.push('Secondary color must be a valid hex color');
+      }
+    }
+
+    if (currentState.step === 5) {
+      if (!currentState.selectedTheme) {
+        newErrors.push('Please select a theme for installation');
+      }
+    }
+
+    if (currentState.step === 6) {
+      if (!currentState.emailFromName.trim()) {
+        newErrors.push('Email sender name is required');
+      }
+      if (!currentState.emailFromAddress.trim()) {
+        newErrors.push('Email sender address is required');
+      }
+      if (currentState.emailFromAddress && !currentState.emailFromAddress.includes('@')) {
+        newErrors.push('Please enter a valid email address');
       }
     }
 
@@ -246,6 +291,30 @@ export function SimpleSetupWizard() {
     // Real-time validation: check if current errors are still valid
     const currentErrors = validateCurrentStep(newState);
     setErrors(currentErrors);
+  };
+
+  const installThemeBlocks = async () => {
+    // Simulate theme installation process
+    const newState = { ...state, installationStatus: 'installing' as const };
+    setState(newState);
+
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Simulate successful installation
+      const completedState = { ...state, installationStatus: 'complete' as const };
+      setState(completedState);
+
+      // Auto-advance to next step after installation
+      setTimeout(() => {
+        setState(prev => ({ ...prev, step: Math.min(prev.step + 1, TOTAL_STEPS) }));
+      }, 1000);
+
+    } catch (error) {
+      const errorState = { ...state, installationStatus: 'error' as const };
+      setState(errorState);
+    }
   };
 
   const progress = (state.step / TOTAL_STEPS) * 100;
@@ -868,6 +937,681 @@ export function SimpleSetupWizard() {
                       )}
                     </Box>
                   </Box>
+                </Box>
+              </Card>
+            </Box>
+          </Box>
+        );
+
+      case 5:
+        return (
+          <Box>
+            <Banner title="Install loyalty program into your theme" tone="info">
+              <p>We'll automatically add the loyalty program blocks to your selected theme. Your existing design will remain unchanged.</p>
+            </Banner>
+
+            <Box paddingBlockStart="500">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    Select Theme
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <FormLayout>
+                      <Select
+                        label="Theme to install loyalty program"
+                        options={[
+                          { label: 'Select a theme...', value: '' },
+                          ...availableThemes.map(theme => ({
+                            label: `${theme.name}${theme.role === 'main' ? ' (Live Theme)' : ''}`,
+                            value: theme.id
+                          }))
+                        ]}
+                        value={state.selectedTheme}
+                        onChange={(value) => updateField('selectedTheme', value)}
+                        helpText="Choose which theme to install the loyalty program blocks into"
+                      />
+                    </FormLayout>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            <Box paddingBlockStart="400">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    Installation Options
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <FormLayout>
+                      <Checkbox
+                        label="Automatically install theme blocks"
+                        checked={state.autoInstallBlocks}
+                        onChange={(checked) => updateField('autoInstallBlocks', checked)}
+                        helpText="Automatically add loyalty program blocks to product pages, header, and cart"
+                      />
+                      <Checkbox
+                        label="Create backup before installation"
+                        checked={state.backupBeforeInstall}
+                        onChange={(checked) => updateField('backupBeforeInstall', checked)}
+                        helpText="Create a backup copy of your theme before making changes (recommended)"
+                      />
+                    </FormLayout>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            {/* Installation Status */}
+            {state.selectedTheme && (
+              <Box paddingBlockStart="400">
+                <Card>
+                  <Box padding="400">
+                    <Text variant="headingMd" as="h4">
+                      Installation Preview
+                    </Text>
+                    <Box paddingBlockStart="300">
+                      <Box
+                        padding="400"
+                        background="bg-surface-secondary"
+                        borderRadius="200"
+                      >
+                        {state.installationStatus === 'pending' && (
+                          <div>
+                            <Text variant="bodyMd" fontWeight="semibold" as="p">
+                              Ready to install to {availableThemes.find(t => t.id === state.selectedTheme)?.name}
+                            </Text>
+                            <Box paddingBlockStart="300">
+                              <Text variant="bodyMd" as="p">
+                                The following will be added to your theme:
+                              </Text>
+                              <Box paddingBlockStart="200">
+                                <ul style={{ marginLeft: '20px' }}>
+                                  <li>✨ Points display in header</li>
+                                  <li>🛍️ Points earning info on product pages</li>
+                                  <li>🎁 Reward redemption in cart</li>
+                                  <li>🎨 Styled with your brand colors</li>
+                                </ul>
+                              </Box>
+                            </Box>
+                            <Box paddingBlockStart="400">
+                              <Button
+                                variant="primary"
+                                onClick={installThemeBlocks}
+                                size="large"
+                              >
+                                🚀 Install Now
+                              </Button>
+                            </Box>
+                          </div>
+                        )}
+
+                        {state.installationStatus === 'installing' && (
+                          <div style={{ textAlign: 'center' }}>
+                            <Text variant="bodyLg" fontWeight="semibold" as="p">
+                              Installing loyalty program...
+                            </Text>
+                            <Box paddingBlockStart="300">
+                              <div style={{
+                                width: '40px',
+                                height: '40px',
+                                border: '3px solid #f3f3f3',
+                                borderTop: '3px solid #007ace',
+                                borderRadius: '50%',
+                                animation: 'spin 1s linear infinite',
+                                margin: '0 auto'
+                              }} />
+                            </Box>
+                            <Box paddingBlockStart="300">
+                              <Text variant="bodyMd" tone="subdued" as="p">
+                                Adding blocks to your theme... This may take a few moments.
+                              </Text>
+                            </Box>
+                          </div>
+                        )}
+
+                        {state.installationStatus === 'complete' && (
+                          <div style={{ textAlign: 'center' }}>
+                            <Text variant="bodyLg" fontWeight="semibold" as="p" style={{ color: '#008060' }}>
+                              ✅ Installation Complete!
+                            </Text>
+                            <Box paddingBlockStart="300">
+                              <Text variant="bodyMd" as="p">
+                                Your loyalty program has been successfully installed to {availableThemes.find(t => t.id === state.selectedTheme)?.name}.
+                              </Text>
+                            </Box>
+                            <Box paddingBlockStart="200">
+                              <Text variant="bodyMd" tone="subdued" as="p">
+                                Advancing to email configuration...
+                              </Text>
+                            </Box>
+                          </div>
+                        )}
+
+                        {state.installationStatus === 'error' && (
+                          <div style={{ textAlign: 'center' }}>
+                            <Text variant="bodyLg" fontWeight="semibold" as="p" style={{ color: '#d72c0d' }}>
+                              ❌ Installation Failed
+                            </Text>
+                            <Box paddingBlockStart="300">
+                              <Text variant="bodyMd" as="p">
+                                There was an issue installing the loyalty program blocks.
+                              </Text>
+                            </Box>
+                            <Box paddingBlockStart="400">
+                              <Button
+                                variant="primary"
+                                onClick={installThemeBlocks}
+                              >
+                                Try Again
+                              </Button>
+                            </Box>
+                          </div>
+                        )}
+                      </Box>
+                    </Box>
+                  </Box>
+                </Card>
+              </Box>
+            )}
+          </Box>
+        );
+
+      case 6:
+        return (
+          <Box>
+            <Banner title="Configure email notifications" tone="info">
+              <p>Set up automated emails to engage customers throughout their loyalty journey.</p>
+            </Banner>
+
+            <Box paddingBlockStart="500">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    Email Settings
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <FormLayout>
+                      <FormLayout.Group condensed>
+                        <TextField
+                          label="Sender Name"
+                          value={state.emailFromName}
+                          onChange={(value) => updateField('emailFromName', value)}
+                          placeholder="e.g., My Store Rewards"
+                          helpText="Name that appears in the 'From' field"
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Sender Email"
+                          type="email"
+                          value={state.emailFromAddress}
+                          onChange={(value) => updateField('emailFromAddress', value)}
+                          placeholder="e.g., rewards@mystore.com"
+                          helpText="Email address for sending notifications"
+                          autoComplete="off"
+                        />
+                      </FormLayout.Group>
+                    </FormLayout>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            <Box paddingBlockStart="400">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    Notification Types
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <FormLayout>
+                      <Checkbox
+                        label="Welcome Email"
+                        checked={state.enableWelcomeEmail}
+                        onChange={(checked) => updateField('enableWelcomeEmail', checked)}
+                        helpText="Send a welcome email when customers join the loyalty program"
+                      />
+                      <Checkbox
+                        label="Points Earned Email"
+                        checked={state.enablePointsEarnedEmail}
+                        onChange={(checked) => updateField('enablePointsEarnedEmail', checked)}
+                        helpText="Notify customers when they earn points from purchases"
+                      />
+                      <Checkbox
+                        label="Reward Available Email"
+                        checked={state.enableRewardAvailableEmail}
+                        onChange={(checked) => updateField('enableRewardAvailableEmail', checked)}
+                        helpText="Alert customers when they have enough points for rewards"
+                      />
+                    </FormLayout>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            {/* Email Preview */}
+            {state.emailFromName && state.emailFromAddress && (
+              <Box paddingBlockStart="400">
+                <Card>
+                  <Box padding="400">
+                    <Text variant="headingMd" as="h4">
+                      Email Preview
+                    </Text>
+                    <Box paddingBlockStart="300">
+                      <Box
+                        padding="400"
+                        background="bg-surface-secondary"
+                        borderRadius="200"
+                      >
+                        <Text variant="bodyMd" fontWeight="semibold" as="p">
+                          Sample Email: Welcome to {state.programName}!
+                        </Text>
+                        <Box paddingBlockStart="200">
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            From: {state.emailFromName} &lt;{state.emailFromAddress}&gt;
+                          </Text>
+                        </Box>
+                        <Box paddingBlockStart="300">
+                          <div style={{
+                            padding: '16px',
+                            background: 'white',
+                            borderRadius: '8px',
+                            border: '1px solid #e5e7eb'
+                          }}>
+                            <Text variant="bodyMd" as="p">
+                              Welcome to {state.programName}! 🎉
+                            </Text>
+                            <Box paddingBlockStart="200">
+                              <Text variant="bodyMd" as="p">
+                                Start earning {state.currency} with every purchase.
+                                You'll get {state.signupBonus} {state.currency} just for joining!
+                              </Text>
+                            </Box>
+                            <Box paddingBlockStart="200">
+                              <Text variant="bodyMd" as="p">
+                                Happy shopping!<br />
+                                The {state.emailFromName} Team
+                              </Text>
+                            </Box>
+                          </div>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Card>
+              </Box>
+            )}
+
+            {/* Enabled Notifications Summary */}
+            <Box paddingBlockStart="400">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h4">
+                    Active Notifications
+                  </Text>
+                  <Box paddingBlockStart="300">
+                    <Box
+                      padding="400"
+                      background="bg-surface-secondary"
+                      borderRadius="200"
+                    >
+                      <Text variant="bodyMd" fontWeight="semibold" as="p">
+                        Customers will receive:
+                      </Text>
+                      <Box paddingBlockStart="200">
+                        <ul style={{ marginLeft: '20px' }}>
+                          {state.enableWelcomeEmail && (
+                            <li>✅ Welcome email when joining the program</li>
+                          )}
+                          {state.enablePointsEarnedEmail && (
+                            <li>✅ Notifications when earning {state.currency}</li>
+                          )}
+                          {state.enableRewardAvailableEmail && (
+                            <li>✅ Alerts when rewards become available</li>
+                          )}
+                          {!state.enableWelcomeEmail && !state.enablePointsEarnedEmail && !state.enableRewardAvailableEmail && (
+                            <li style={{ color: '#d72c0d' }}>❌ No email notifications enabled</li>
+                          )}
+                        </ul>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+          </Box>
+        );
+
+      case 7:
+        return (
+          <Box>
+            <Banner title="Test your loyalty program" tone="info">
+              <p>Preview and test your loyalty program before launching to ensure everything works perfectly.</p>
+            </Banner>
+
+            <Box paddingBlockStart="500">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    Program Summary
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <Box
+                      padding="400"
+                      background="bg-surface-secondary"
+                      borderRadius="200"
+                    >
+                      <div style={{ display: 'grid', gap: '16px' }}>
+                        <div>
+                          <Text variant="bodyMd" fontWeight="semibold" as="p">
+                            🎯 {state.programName}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            {state.programType} • {state.currency}
+                          </Text>
+                        </div>
+
+                        <div>
+                          <Text variant="bodyMd" fontWeight="semibold" as="p">
+                            💰 Earning Structure
+                          </Text>
+                          <ul style={{ marginLeft: '16px', marginTop: '4px' }}>
+                            <li>{state.pointsPerDollar} {state.currency} per $1 spent</li>
+                            <li>{state.signupBonus} {state.currency} signup bonus</li>
+                            <li>{state.birthdayBonus} {state.currency} birthday bonus</li>
+                          </ul>
+                        </div>
+
+                        <div>
+                          <Text variant="bodyMd" fontWeight="semibold" as="p">
+                            🎁 Rewards ({state.rewardTiers.length} tiers)
+                          </Text>
+                          <ul style={{ marginLeft: '16px', marginTop: '4px' }}>
+                            {state.rewardTiers.slice(0, 3).map((tier, index) => (
+                              <li key={tier.id}>
+                                {tier.name} - {tier.pointsRequired} {state.currency}
+                              </li>
+                            ))}
+                            {state.rewardTiers.length > 3 && (
+                              <li>... and {state.rewardTiers.length - 3} more</li>
+                            )}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <Text variant="bodyMd" fontWeight="semibold" as="p">
+                            🎨 Styling
+                          </Text>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                            <div style={{
+                              width: '16px',
+                              height: '16px',
+                              background: state.primaryColor,
+                              borderRadius: '50%',
+                              border: '1px solid #ccc'
+                            }} />
+                            <Text variant="bodySm" as="span">
+                              {state.pointsDisplayStyle} style • Header: {state.showInHeader ? 'Yes' : 'No'}
+                            </Text>
+                          </div>
+                        </div>
+                      </div>
+                    </Box>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            <Box paddingBlockStart="400">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    Live Preview
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <Box
+                      padding="400"
+                      background="bg-surface-secondary"
+                      borderRadius="200"
+                    >
+                      <Text variant="bodyMd" fontWeight="semibold" as="p">
+                        Customer Journey Simulation
+                      </Text>
+                      <Box paddingBlockStart="300">
+                        <div style={{ display: 'grid', gap: '12px' }}>
+                          <div style={{
+                            padding: '12px',
+                            background: 'white',
+                            borderRadius: '6px',
+                            border: `2px solid ${state.primaryColor}20`
+                          }}>
+                            <Text variant="bodySm" fontWeight="semibold" as="p">
+                              1. Customer Signs Up
+                            </Text>
+                            <Text variant="bodySm" as="p">
+                              Receives {state.signupBonus} {state.currency} welcome bonus
+                            </Text>
+                          </div>
+
+                          <div style={{
+                            padding: '12px',
+                            background: 'white',
+                            borderRadius: '6px',
+                            border: `2px solid ${state.primaryColor}20`
+                          }}>
+                            <Text variant="bodySm" fontWeight="semibold" as="p">
+                              2. Makes $50 Purchase
+                            </Text>
+                            <Text variant="bodySm" as="p">
+                              Earns {state.pointsPerDollar * 50} {state.currency} •
+                              Total: {state.signupBonus + (state.pointsPerDollar * 50)} {state.currency}
+                            </Text>
+                          </div>
+
+                          <div style={{
+                            padding: '12px',
+                            background: 'white',
+                            borderRadius: '6px',
+                            border: `2px solid ${state.primaryColor}20`
+                          }}>
+                            <Text variant="bodySm" fontWeight="semibold" as="p">
+                              3. Redeems Reward
+                            </Text>
+                            <Text variant="bodySm" as="p">
+                              {state.rewardTiers.find(t => t.pointsRequired <= (state.signupBonus + (state.pointsPerDollar * 50)))?.name || 'Can redeem available rewards'}
+                            </Text>
+                          </div>
+                        </div>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            <Box paddingBlockStart="400">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    Pre-Launch Checklist
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <FormLayout>
+                      <div style={{
+                        padding: '16px',
+                        background: '#f0f9ff',
+                        borderRadius: '8px',
+                        border: '1px solid #0ea5e9'
+                      }}>
+                        <Text variant="bodyMd" fontWeight="semibold" as="p">
+                          ✅ Ready to Launch!
+                        </Text>
+                        <Box paddingBlockStart="200">
+                          <ul style={{ marginLeft: '16px' }}>
+                            <li>✅ Program configured with {state.rewardTiers.length} reward tiers</li>
+                            <li>✅ Theme integration ready for {availableThemes.find(t => t.id === state.selectedTheme)?.name || 'selected theme'}</li>
+                            <li>✅ Email notifications configured</li>
+                            <li>✅ Visual styling matches your brand</li>
+                          </ul>
+                        </Box>
+                      </div>
+                    </FormLayout>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+          </Box>
+        );
+
+      case 8:
+        return (
+          <Box>
+            <Banner title="🎉 Congratulations! Your loyalty program is ready!" tone="success">
+              <p>Your loyalty program has been successfully configured and is ready to engage your customers.</p>
+            </Banner>
+
+            <Box paddingBlockStart="500">
+              <Card>
+                <Box padding="400">
+                  <div style={{ textAlign: 'center' }}>
+                    <Text variant="headingLg" as="h2">
+                      🚀 Launch Complete!
+                    </Text>
+                    <Box paddingBlockStart="400">
+                      <Text variant="bodyLg" as="p">
+                        Your <strong>{state.programName}</strong> loyalty program is now live and ready to start building customer relationships.
+                      </Text>
+                    </Box>
+                  </div>
+                </Box>
+              </Card>
+            </Box>
+
+            <Box paddingBlockStart="400">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    What's Next?
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <div style={{ display: 'grid', gap: '16px' }}>
+                      <div style={{
+                        padding: '16px',
+                        background: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0'
+                      }}>
+                        <Text variant="bodyMd" fontWeight="semibold" as="p">
+                          📊 Monitor Performance
+                        </Text>
+                        <Text variant="bodyMd" as="p">
+                          Track customer engagement, point redemptions, and program ROI in your dashboard.
+                        </Text>
+                      </div>
+
+                      <div style={{
+                        padding: '16px',
+                        background: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0'
+                      }}>
+                        <Text variant="bodyMd" fontWeight="semibold" as="p">
+                          📧 Customer Communication
+                        </Text>
+                        <Text variant="bodyMd" as="p">
+                          Promote your new loyalty program through email newsletters and social media.
+                        </Text>
+                      </div>
+
+                      <div style={{
+                        padding: '16px',
+                        background: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0'
+                      }}>
+                        <Text variant="bodyMd" fontWeight="semibold" as="p">
+                          🔧 Customize Further
+                        </Text>
+                        <Text variant="bodyMd" as="p">
+                          Fine-tune rewards, adjust earning rates, and experiment with seasonal promotions.
+                        </Text>
+                      </div>
+                    </div>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            <Box paddingBlockStart="400">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    Quick Stats
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <Box
+                      padding="400"
+                      background="bg-surface-secondary"
+                      borderRadius="200"
+                    >
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', textAlign: 'center' }}>
+                        <div>
+                          <Text variant="headingMd" as="p">
+                            {state.rewardTiers.length}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            Reward Tiers
+                          </Text>
+                        </div>
+                        <div>
+                          <Text variant="headingMd" as="p">
+                            {state.signupBonus}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            Welcome Bonus
+                          </Text>
+                        </div>
+                        <div>
+                          <Text variant="headingMd" as="p">
+                            {state.pointsPerDollar}x
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            Earning Rate
+                          </Text>
+                        </div>
+                        <div>
+                          <Text variant="headingMd" as="p">
+                            {[state.enableWelcomeEmail, state.enablePointsEarnedEmail, state.enableRewardAvailableEmail].filter(Boolean).length}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            Email Types
+                          </Text>
+                        </div>
+                      </div>
+                    </Box>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            <Box paddingBlockStart="400">
+              <Card>
+                <Box padding="400">
+                  <div style={{ textAlign: 'center' }}>
+                    <Button
+                      variant="primary"
+                      size="large"
+                      url="/app"
+                    >
+                      🎯 Go to Dashboard
+                    </Button>
+                    <Box paddingBlockStart="300">
+                      <Text variant="bodySm" tone="subdued" as="p">
+                        Start managing your loyalty program
+                      </Text>
+                    </Box>
+                  </div>
                 </Box>
               </Card>
             </Box>
