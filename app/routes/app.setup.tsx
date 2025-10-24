@@ -1,5 +1,5 @@
-import type { LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { SimpleSetupWizard } from "../components/setup/SimpleSetupWizard";
 
@@ -33,6 +33,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       ],
     });
   }
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  await authenticate.admin(request);
+
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  if (intent === "launch") {
+    return redirect("/app");
+  }
+
+  return json({ success: false, message: "Unsupported setup action." }, { status: 400 });
 };
 
 export default function Setup() {

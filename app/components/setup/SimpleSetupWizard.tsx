@@ -4,8 +4,8 @@
  * A working setup wizard that demonstrates the infrastructure
  */
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLoaderData, useFetcher } from '@remix-run/react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLoaderData, useFetcher, Form } from '@remix-run/react';
 import {
   Page,
   Layout,
@@ -105,7 +105,6 @@ const PROGRAM_TYPE_OPTIONS = [
 const TOTAL_STEPS = 8;
 
 export function SimpleSetupWizard() {
-  const navigate = useNavigate();
   const loaderData = useLoaderData<SetupLoaderData>();
   const fetcher = useFetcher<ThemeActionResponse>();
 
@@ -172,6 +171,50 @@ export function SimpleSetupWizard() {
   });
 
   const [errors, setErrors] = useState<string[]>([]);
+  const [hasHydratedState, setHasHydratedState] = useState(false);
+
+  const persistenceKey = useMemo(
+    () => `loyco-setup-${loaderData.shop}`,
+    [loaderData.shop],
+  );
+
+  const clearPersistedState = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      window.localStorage.removeItem(persistenceKey);
+    } catch (error) {
+      console.warn('Failed to clear persisted setup state', error);
+    }
+  }, [persistenceKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const stored = window.localStorage.getItem(persistenceKey);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Partial<WizardState>;
+        if (parsed && typeof parsed === 'object') {
+          setState((prev) => ({ ...prev, ...parsed }));
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to read persisted setup state', error);
+    } finally {
+      setHasHydratedState(true);
+    }
+  }, [persistenceKey]);
+
+  useEffect(() => {
+    if (!hasHydratedState || typeof window === 'undefined') return;
+
+    try {
+      window.localStorage.setItem(persistenceKey, JSON.stringify(state));
+    } catch (error) {
+      console.warn('Failed to persist setup state', error);
+    }
+  }, [state, hasHydratedState, persistenceKey]);
 
   // Use themes from server-side loader
   const availableThemes = loaderData.themes;
@@ -402,8 +445,8 @@ export function SimpleSetupWizard() {
   }, [fetcher.state, fetcher.data]);
 
   const launchProgram = () => {
-    // Mark program as launched
-    setState(prev => ({ ...prev, programLaunched: true }));
+    setState((prev) => ({ ...prev, programLaunched: true }));
+    clearPersistedState();
   };
 
   const progress = (state.step / TOTAL_STEPS) * 100;
@@ -1815,12 +1858,15 @@ export function SimpleSetupWizard() {
                             🚀 Launch Program
                           </Button>
                         ) : (
-                          <Button
-                            variant="primary"
-                            onClick={() => navigate('/app')}
-                          >
-                            🎯 Go to Dashboard
-                          </Button>
+                          <Form method="post" style={{ display: 'inline-block' }}>
+                            <input type="hidden" name="intent" value="launch" />
+                            <Button
+                              variant="primary"
+                              submit
+                            >
+                              🎯 Go to Dashboard
+                            </Button>
+                          </Form>
                         )
                       ) : (
                         <Button

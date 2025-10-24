@@ -5,7 +5,7 @@ import {
   shopifyApp,
   DeliveryMethod,
 } from "@shopify/shopify-app-remix/server";
-import { MemorySessionStorage } from "@shopify/shopify-app-session-storage-memory";
+import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import { restResources } from "@shopify/shopify-api/rest/admin/2024-01";
 import { prisma } from "./lib/prisma.server";
 
@@ -26,6 +26,22 @@ console.log("Shopify App Configuration:");
 console.log("- API Key:", SHOPIFY_API_KEY.substring(0, 8) + "...");
 console.log("- App URL:", normalizedAppUrl);
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __loycoSessionStorage: PrismaSessionStorage | undefined;
+}
+
+const sessionStorage =
+  globalThis.__loycoSessionStorage ??
+  new PrismaSessionStorage(prisma, {
+    connectionRetries: 5,
+    connectionRetryIntervalMs: 2000,
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalThis.__loycoSessionStorage = sessionStorage;
+}
+
 const shopify = shopifyApp({
   apiKey: SHOPIFY_API_KEY,
   apiSecretKey: SHOPIFY_API_SECRET,
@@ -40,7 +56,7 @@ const shopify = shopifyApp({
   ],
   appUrl: normalizedAppUrl,
   authPathPrefix: "/auth",
-  sessionStorage: new MemorySessionStorage() as any,
+  sessionStorage,
   distribution: AppDistribution.AppStore,
   restResources,
   future: {

@@ -65,7 +65,15 @@ function extractErrorMessage(error: unknown): string {
 }
 
 async function readAssetFromDisk(relativePath: string) {
-  return fs.readFile(assetPath(relativePath), "utf-8");
+  const filePath = assetPath(relativePath);
+
+  try {
+    return await fs.readFile(filePath, "utf-8");
+  } catch (error) {
+    throw new Error(
+      `Missing theme asset "${relativePath}". Ensure the file exists at ${filePath}. (${extractErrorMessage(error)})`,
+    );
+  }
 }
 
 function assertValidThemeId(themeId: string) {
