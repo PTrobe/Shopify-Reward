@@ -24,6 +24,7 @@ import {
   Checkbox,
   ChoiceList,
 } from '@shopify/polaris';
+import { useAuthenticatedFetch } from '../../hooks/useAuthenticatedFetch';
 
 interface RewardTier {
   id: string;
@@ -171,6 +172,7 @@ export function SimpleSetupWizard() {
 
   const [errors, setErrors] = useState<string[]>([]);
   const [hasHydratedState, setHasHydratedState] = useState(false);
+  const authenticatedFetch = useAuthenticatedFetch();
 
   const persistenceKey = useMemo(
     () => `loyco-setup-${loaderData.shop}`,
@@ -403,9 +405,8 @@ export function SimpleSetupWizard() {
     });
 
     try {
-      const response = await fetch('/api/admin/theme', {
+      const response = await authenticatedFetch('/api/admin/theme', {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
