@@ -28,14 +28,29 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const response = await admin.rest.resources.Shop.all({ session });
     const shop = response.data[0];
 
-    // Fetch real customer and order data from Shopify
-    const [customersResponse, ordersResponse] = await Promise.all([
-      admin.rest.resources.Customer.all({ session, limit: 250 }),
-      admin.rest.resources.Order.all({ session, limit: 250, status: 'any' })
-    ]);
+    // Fetch real customer and order data from Shopify with error handling
+    let customers = [];
+    let orders = [];
 
-    const customers = customersResponse.data || [];
-    const orders = ordersResponse.data || [];
+    try {
+      const [customersResponse, ordersResponse] = await Promise.all([
+        admin.rest.resources.Customer.all({ session, limit: 50 }).catch(err => {
+          console.warn("Could not fetch customers:", err.message);
+          return { data: [] };
+        }),
+        admin.rest.resources.Order.all({ session, limit: 50, status: 'any' }).catch(err => {
+          console.warn("Could not fetch orders:", err.message);
+          return { data: [] };
+        })
+      ]);
+
+      customers = customersResponse.data || [];
+      orders = ordersResponse.data || [];
+    } catch (error) {
+      console.warn("Error fetching customer/order data, using fallback:", error);
+      customers = [];
+      orders = [];
+    }
 
     // Calculate real metrics from Shopify data
     const totalCustomers = customers.length;
@@ -58,18 +73,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         { name: 'Free Shipping', redemptions: Math.floor(totalOrders * 0.08), pointsCost: 750 },
         { name: '$5 Off Purchase', redemptions: Math.floor(totalOrders * 0.05), pointsCost: 500 }
       ],
-      recentActivity: customers.slice(0, 4).map((customer, index) => {
-        const actions = ['Earned points from purchase', 'Joined loyalty program', 'Redeemed reward', 'Updated profile'];
-        const times = ['2 minutes ago', '15 minutes ago', '1 hour ago', '3 hours ago'];
-        const firstName = customer.first_name || 'Customer';
-        const lastInitial = customer.last_name ? customer.last_name.charAt(0) + '.' : '';
+      recentActivity: customers.length > 0
+        ? customers.slice(0, 4).map((customer, index) => {
+            const actions = ['Earned points from purchase', 'Joined loyalty program', 'Redeemed reward', 'Updated profile'];
+            const times = ['2 minutes ago', '15 minutes ago', '1 hour ago', '3 hours ago'];
+            const firstName = customer.first_name || 'Customer';
+            const lastInitial = customer.last_name ? customer.last_name.charAt(0) + '.' : '';
 
-        return {
-          customer: `${firstName} ${lastInitial}`.trim(),
-          action: actions[index % actions.length],
-          time: times[index]
-        };
-      })
+            return {
+              customer: `${firstName} ${lastInitial}`.trim(),
+              action: actions[index % actions.length],
+              time: times[index]
+            };
+          })
+        : [] // Empty activity if no customers
     };
 
     return json({
