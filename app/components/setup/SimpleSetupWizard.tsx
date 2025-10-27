@@ -45,11 +45,21 @@ type ThemeActionResponse = {
   message?: string;
   error?: string;
   details?: Record<string, unknown>;
+  jobId?: string;
+  jobStatus?: string;
+};
+
+type SetupProgressData = {
+  currentStep: number;
+  persistedState: Record<string, unknown> | null;
+  installationStatus: string;
+  installationMessage: string | null;
 };
 
 type SetupLoaderData = {
   shop: string;
   themes: ThemeSummary[];
+  progress: SetupProgressData | null;
 };
 
 interface WizardState {
@@ -104,138 +114,129 @@ const PROGRAM_TYPE_OPTIONS = [
 
 const TOTAL_STEPS = 8;
 
-export function SimpleSetupWizard() {
-  const loaderData = useLoaderData<SetupLoaderData>();
+const BASE_REWARD_TIERS: RewardTier[] = [
+  {
+    id: '1',
+    name: '$5 Off',
+    pointsRequired: 500,
+    discountType: 'fixed',
+    discountValue: 5,
+    description: '$5 off your next purchase'
+  },
+  {
+    id: '2',
+    name: '10% Off',
+    pointsRequired: 1000,
+    discountType: 'percentage',
+    discountValue: 10,
+    description: '10% off your entire order'
+  },
+  {
+    id: '3',
+    name: 'Free Shipping',
+    pointsRequired: 750,
+    discountType: 'freeShipping',
+    discountValue: 0,
+    description: 'Free shipping on your next order'
+  }
+];
 
-  const [state, setState] = useState<WizardState>({
+function buildInitialState(overrides: Partial<WizardState> = {}): WizardState {
+  return {
     step: 1,
     programName: '',
     currency: 'points',
     programType: 'points-based',
-    // Points Configuration defaults
     pointsPerDollar: 1,
     signupBonus: 100,
     birthdayBonus: 50,
     referralBonus: 200,
     reviewBonus: 25,
     minimumRedemption: 100,
-    // Reward Tiers defaults
-    rewardTiers: [
-      {
-        id: '1',
-        name: '$5 Off',
-        pointsRequired: 500,
-        discountType: 'fixed',
-        discountValue: 5,
-        description: '$5 off your next purchase'
-      },
-      {
-        id: '2',
-        name: '10% Off',
-        pointsRequired: 1000,
-        discountType: 'percentage',
-        discountValue: 10,
-        description: '10% off your entire order'
-      },
-      {
-        id: '3',
-        name: 'Free Shipping',
-        pointsRequired: 750,
-        discountType: 'freeShipping',
-        discountValue: 0,
-        description: 'Free shipping on your next order'
-      }
-    ],
-    // Visual Customization defaults
+    rewardTiers: BASE_REWARD_TIERS.map((tier) => ({ ...tier })),
     primaryColor: '#FFD700',
     secondaryColor: '#B8860B',
     pointsDisplayStyle: 'badge',
     showInHeader: true,
     showOnProductPage: true,
     showInCart: false,
-    // Theme Integration defaults
     selectedTheme: '',
     autoInstallBlocks: true,
     backupBeforeInstall: true,
     installationStatus: 'pending',
     installationMessage: '',
-    // Email Notifications defaults
     enableWelcomeEmail: true,
     enablePointsEarnedEmail: true,
     enableRewardAvailableEmail: true,
     emailFromName: '',
     emailFromAddress: '',
-    // Program Launch defaults
     programLaunched: false,
-  });
+    ...overrides,
+  };
+}
+
+export function SimpleSetupWizard() {
+  const loaderData = useLoaderData<SetupLoaderData>();
+
+  const [state, setState] = useState<WizardState>(buildInitialState());
 
   const [errors, setErrors] = useState<string[]>([]);
-  const [hasHydratedState, setHasHydratedState] = useState(false);
-  const fetcher = useFetcher<ThemeActionResponse>();
+  const installFetcher = useFetcher<ThemeActionResponse>();
+  const persistFetcher = useFetcher();
+  const [isReadyToPersist, setIsReadyToPersist] = useState(false);
 
-  const persistenceKey = useMemo(
-    () => `loyco-setup-${loaderData.shop}`,
-    [loaderData.shop],
-  );
+  const initialStateFromServer = useMemo(() => {
+    const progress = loaderData.progress;
+    const persistedState = (progress?.persistedState ?? {}) as Partial<WizardState>;
+    return buildInitialState({
+      ...persistedState,
+      step: progress?.currentStep ?? persistedState.step ?? 1,
+      installationStatus: progress?.installationStatus ?? persistedState.installationStatus ?? 'pending',
+      installationMessage: progress?.installationMessage ?? persistedState.installationMessage ?? '',
+    });
+  }, [loaderData.progress]);
 
-  const clearPersistedState = useCallback(() => {
-    if (typeof window === 'undefined') return;
-
-    try {
-      window.localStorage.removeItem(persistenceKey);
-    } catch (error) {
-      console.warn('Failed to clear persisted setup state', error);
-    }
-  }, [persistenceKey]);
+  useEffect(() => {
+    setState(initialStateFromServer);
+    setIsReadyToPersist(true);
+  }, [initialStateFromServer]);
 
   const resetWizard = useCallback(() => {
-    clearPersistedState();
-    setState(initialState);
-  }, [clearPersistedState]);
+    setState(buildInitialState());
+    persistFetcher.submit({ intent: 'reset' }, { method: 'post' });
+  }, [persistFetcher]);
 
   // Reset installation status when entering step 5 (unless already complete)
   useEffect(() => {
     if (state.step === 5 && state.installationStatus === 'installing') {
       setState(prev => ({
         ...prev,
-        installationStatus: 'idle',
+        installationStatus: 'pending',
         installationMessage: ''
       }));
     }
   }, [state.step, state.installationStatus]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isReadyToPersist) return;
 
-    try {
-      const stored = window.localStorage.getItem(persistenceKey);
-      if (stored) {
-        const parsed = JSON.parse(stored) as Partial<WizardState>;
-        if (parsed && typeof parsed === 'object') {
-          // Clean up any stuck installation status from localStorage
-          if (parsed.installationStatus === 'installing') {
-            parsed.installationStatus = 'idle';
-            parsed.installationMessage = '';
-          }
-          setState((prev) => ({ ...prev, ...parsed }));
-        }
+    const handle = window.setTimeout(() => {
+      const formData = new FormData();
+      formData.append('intent', 'persist');
+      formData.append('currentStep', String(state.step));
+      formData.append('installationStatus', state.installationStatus);
+      if (state.installationMessage) {
+        formData.append('installationMessage', state.installationMessage);
       }
-    } catch (error) {
-      console.warn('Failed to read persisted setup state', error);
-    } finally {
-      setHasHydratedState(true);
-    }
-  }, [persistenceKey]);
+      formData.append('state', JSON.stringify({
+        ...state,
+        rewardTiers: state.rewardTiers.map((tier) => ({ ...tier })),
+      }));
+      persistFetcher.submit(formData, { method: 'post' });
+    }, 600);
 
-  useEffect(() => {
-    if (!hasHydratedState || typeof window === 'undefined') return;
-
-    try {
-      window.localStorage.setItem(persistenceKey, JSON.stringify(state));
-    } catch (error) {
-      console.warn('Failed to persist setup state', error);
-    }
-  }, [state, hasHydratedState, persistenceKey]);
+    return () => window.clearTimeout(handle);
+  }, [state, isReadyToPersist, persistFetcher]);
 
   // Use themes from server-side loader
   const availableThemes = loaderData.themes;
@@ -429,7 +430,7 @@ export function SimpleSetupWizard() {
       themeId: selectedThemeId
     });
 
-    fetcher.submit(
+    installFetcher.submit(
       { action: 'install_all', themeId: selectedThemeId },
       { method: 'post' }
     );
@@ -437,14 +438,14 @@ export function SimpleSetupWizard() {
 
   // Handle fetcher response
   useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data) {
-      console.log('🛠️ Fetcher response:', fetcher.data);
+    if (installFetcher.state === 'idle' && installFetcher.data) {
+      console.log('🛠️ Fetcher response:', installFetcher.data);
 
-      if (fetcher.data.success) {
+      if (installFetcher.data.success) {
         setState((prev) => ({
           ...prev,
           installationStatus: 'complete',
-          installationMessage: fetcher.data.message || 'Loyalty blocks installed successfully.',
+          installationMessage: installFetcher.data.message || 'Loyalty blocks installed successfully.',
         }));
 
         setTimeout(() => {
@@ -454,8 +455,8 @@ export function SimpleSetupWizard() {
           }));
         }, 1200);
       } else {
-        const message = fetcher.data.message || fetcher.data.error || 'Theme installation failed. Please try again.';
-        console.error('Theme installation failed:', fetcher.data);
+        const message = installFetcher.data.message || installFetcher.data.error || 'Theme installation failed. Please try again.';
+        console.error('Theme installation failed:', installFetcher.data);
         setState((prev) => ({
           ...prev,
           installationStatus: 'error',
@@ -463,11 +464,10 @@ export function SimpleSetupWizard() {
         }));
       }
     }
-  }, [fetcher.state, fetcher.data]);
+  }, [installFetcher.state, installFetcher.data]);
 
   const launchProgram = () => {
     setState((prev) => ({ ...prev, programLaunched: true }));
-    clearPersistedState();
   };
 
   const progress = (state.step / TOTAL_STEPS) * 100;

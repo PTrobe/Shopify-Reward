@@ -11,39 +11,41 @@ datasource db {
 }
 
 model Session {
-  id          String   @id
-  shop        String
-  state       String
-  isOnline    Boolean  @default(false)
-  scope       String?
-  expires     DateTime?
-  accessToken String
-  userId      BigInt?
-  firstName   String?
-  lastName    String?
-  email       String?
-  accountOwner Boolean @default(false)
-  locale      String?
-  collaborator Boolean? @default(false)
-  emailVerified Boolean? @default(false)
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
 }
 
 model Shop {
-  id                String    @id @default(cuid())
-  shopifyDomain     String    @unique
-  accessToken       String    @db.Text // Encrypted
-  email             String
-  ownerName         String
-  installedAt       DateTime  @default(now())
-  uninstalledAt     DateTime?
-  billingPlan       String    @default("free")
-  billingStatus     String    @default("active")
+  id            String    @id @default(cuid())
+  shopifyDomain String    @unique
+  accessToken   String    @db.Text // Encrypted
+  email         String
+  ownerName     String
+  installedAt   DateTime  @default(now())
+  uninstalledAt DateTime?
+  billingPlan   String    @default("free")
+  billingStatus String    @default("active")
 
   // Relations
-  loyaltyProgram    LoyaltyProgram?
-  customers         Customer[]
-  transactions      Transaction[]
-  webhookEvents     WebhookEvent[]
+  loyaltyProgram LoyaltyProgram?
+  customers      Customer[]
+  transactions   Transaction[]
+  webhookEvents  WebhookEvent[]
+  setupProgress  SetupProgress?
+  installJobs    ThemeInstallJob[]
 
   @@index([shopifyDomain])
   @@index([billingStatus])
@@ -51,81 +53,81 @@ model Shop {
 }
 
 model LoyaltyProgram {
-  id                String    @id @default(cuid())
-  shopId            String    @unique
-  shop              Shop      @relation(fields: [shopId], references: [id])
+  id     String @id @default(cuid())
+  shopId String @unique
+  shop   Shop   @relation(fields: [shopId], references: [id])
 
   // Basic Settings
-  name              String
-  active            Boolean   @default(true)
-  currency          String    @default("USD")
+  name     String
+  active   Boolean @default(true)
+  currency String  @default("USD")
 
   // Points Configuration
-  pointsName        String    @default("Points")
-  pointsPerDollar   Int       @default(1)
-  welcomeBonus      Int       @default(0)
-  referralBonus     Int       @default(0)
-  birthdayBonus     Int       @default(0)
+  pointsName      String @default("Points")
+  pointsPerDollar Int    @default(1)
+  welcomeBonus    Int    @default(0)
+  referralBonus   Int    @default(0)
+  birthdayBonus   Int    @default(0)
 
   // Feature Flags
-  tiersEnabled      Boolean   @default(false)
-  referralsEnabled  Boolean   @default(false)
-  expirationEnabled Boolean   @default(false)
-  expirationDays    Int       @default(365)
+  tiersEnabled      Boolean @default(false)
+  referralsEnabled  Boolean @default(false)
+  expirationEnabled Boolean @default(false)
+  expirationDays    Int     @default(365)
 
   // Customization
-  primaryColor      String    @default("#3498db")
-  secondaryColor    String    @default("#2c3e50")
-  logoUrl           String?
-  widgetPosition    String    @default("bottom-right")
-  customCss         String?
+  primaryColor   String  @default("#3498db")
+  secondaryColor String  @default("#2c3e50")
+  logoUrl        String?
+  widgetPosition String  @default("bottom-right")
+  customCss      String?
 
   // Metadata
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  tiers             Tier[]
-  rewards           Reward[]
-  campaigns         Campaign[]
+  tiers     Tier[]
+  rewards   Reward[]
+  campaigns Campaign[]
 
   @@map("loyalty_programs")
 }
 
 model Customer {
-  id                String    @id @default(cuid())
+  id                String @id @default(cuid())
   shopId            String
-  shop              Shop      @relation(fields: [shopId], references: [id])
+  shop              Shop   @relation(fields: [shopId], references: [id])
   shopifyCustomerId String
 
   // Personal Info
-  email             String
-  firstName         String?
-  lastName          String?
-  phone             String?
-  birthday          DateTime?
+  email     String
+  firstName String?
+  lastName  String?
+  phone     String?
+  birthday  DateTime?
 
   // Loyalty Data
-  pointsBalance     Int       @default(0)
-  lifetimePoints    Int       @default(0)
-  lifetimeSpent     Decimal   @default(0)
-  currentTierId     String?
-  currentTier       Tier?     @relation(fields: [currentTierId], references: [id])
+  pointsBalance  Int     @default(0)
+  lifetimePoints Int     @default(0)
+  lifetimeSpent  Decimal @default(0)
+  currentTierId  String?
+  currentTier    Tier?   @relation(fields: [currentTierId], references: [id])
 
   // Referral System
-  referralCode      String    @unique @default(cuid())
-  referredById      String?
-  referredBy        Customer? @relation("Referrals", fields: [referredById], references: [id])
-  referrals         Customer[] @relation("Referrals")
+  referralCode String     @unique @default(cuid())
+  referredById String?
+  referredBy   Customer?  @relation("Referrals", fields: [referredById], references: [id])
+  referrals    Customer[] @relation("Referrals")
 
   // Engagement
-  enrolledAt        DateTime  @default(now())
-  lastActivityAt    DateTime  @default(now())
-  totalOrders       Int       @default(0)
+  enrolledAt     DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+  totalOrders    Int      @default(0)
 
   // Relations
-  transactions      Transaction[]
-  redemptions       Redemption[]
+  transactions Transaction[]
+  redemptions  Redemption[]
 
   @@unique([shopId, shopifyCustomerId])
   @@index([email])
@@ -138,28 +140,28 @@ model Customer {
 }
 
 model Transaction {
-  id                String    @id @default(cuid())
-  shopId            String
-  shop              Shop      @relation(fields: [shopId], references: [id])
-  customerId        String
-  customer          Customer  @relation(fields: [customerId], references: [id])
+  id         String   @id @default(cuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
 
   // Transaction Details
-  type              TransactionType // EARNED, REDEEMED, EXPIRED, ADJUSTED, BONUS
-  points            Int
-  balanceBefore     Int
-  balanceAfter      Int
-  description       String
+  type          TransactionType // EARNED, REDEEMED, EXPIRED, ADJUSTED, BONUS
+  points        Int
+  balanceBefore Int
+  balanceAfter  Int
+  description   String
 
   // Source Information
-  source            String?   // ORDER, REFERRAL, BIRTHDAY, MANUAL, etc.
-  shopifyOrderId    String?
+  source             String? // ORDER, REFERRAL, BIRTHDAY, MANUAL, etc.
+  shopifyOrderId     String?
   shopifyOrderNumber String?
 
   // Metadata
-  metadata          Json?
-  createdAt         DateTime  @default(now())
-  expiresAt         DateTime?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
 
   @@index([customerId, createdAt])
   @@index([shopId, createdAt])
@@ -170,62 +172,93 @@ model Transaction {
   @@map("transactions")
 }
 
+model SetupProgress {
+  id                  String   @id @default(cuid())
+  shopId              String   @unique
+  shop                Shop     @relation(fields: [shopId], references: [id])
+  currentStep         Int      @default(1)
+  persistedState      Json?    @default("{}")
+  installationStatus  String   @default("pending")
+  installationMessage String?  @db.Text
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("setup_progress")
+}
+
+model ThemeInstallJob {
+  id           String    @id @default(cuid())
+  shopId       String
+  shop         Shop      @relation(fields: [shopId], references: [id])
+  themeId      String
+  action       String
+  status       String    @default("queued")
+  errorMessage String?   @db.Text
+  createdAt    DateTime  @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
+  payload      Json?
+
+  @@index([shopId, status, createdAt])
+  @@map("theme_install_jobs")
+}
+
 model Reward {
-  id                String    @id @default(cuid())
-  programId         String
-  program           LoyaltyProgram @relation(fields: [programId], references: [id])
+  id        String         @id @default(cuid())
+  programId String
+  program   LoyaltyProgram @relation(fields: [programId], references: [id])
 
   // Reward Details
-  name              String
-  description       String
-  pointsCost        Int
-  rewardType        RewardType // FIXED_DISCOUNT, PERCENT_DISCOUNT, FREE_PRODUCT, FREE_SHIPPING
-  rewardValue       Json      // {amount: 10} or {percent: 20} or {productId: "..."}
+  name        String
+  description String
+  pointsCost  Int
+  rewardType  RewardType // FIXED_DISCOUNT, PERCENT_DISCOUNT, FREE_PRODUCT, FREE_SHIPPING
+  rewardValue Json // {amount: 10} or {percent: 20} or {productId: "..."}
 
   // Availability
-  active            Boolean   @default(true)
-  startDate         DateTime?
-  endDate           DateTime?
-  usageLimit        Int?      // Total usage limit
-  perCustomerLimit  Int?      // Per customer limit
-  minimumPurchase   Decimal?
+  active           Boolean   @default(true)
+  startDate        DateTime?
+  endDate          DateTime?
+  usageLimit       Int? // Total usage limit
+  perCustomerLimit Int? // Per customer limit
+  minimumPurchase  Decimal?
 
   // Display
-  imageUrl          String?
-  displayOrder      Int       @default(0)
+  imageUrl     String?
+  displayOrder Int     @default(0)
 
   // Usage Tracking
-  totalRedemptions  Int       @default(0)
+  totalRedemptions Int @default(0)
 
   // Relations
-  redemptions       Redemption[]
+  redemptions Redemption[]
 
   @@index([programId, active])
   @@map("rewards")
 }
 
 model Tier {
-  id                String    @id @default(cuid())
-  programId         String
-  program           LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  id        String         @id @default(cuid())
+  programId String
+  program   LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
 
   // Tier Configuration
-  name              String
-  level             Int       // 1, 2, 3, etc.
-  requiredPoints    Int       // Lifetime points required
-  pointsMultiplier  Float     @default(1.0)
+  name             String
+  level            Int // 1, 2, 3, etc.
+  requiredPoints   Int // Lifetime points required
+  pointsMultiplier Float  @default(1.0)
 
   // Benefits
-  perks             String[]  // Array of perk descriptions
-  freeShipping      Boolean   @default(false)
+  perks              String[] // Array of perk descriptions
+  freeShipping       Boolean  @default(false)
   birthdayMultiplier Float    @default(1.0)
 
   // Display
-  color             String    @default("#333333")
-  icon              String?
+  color String  @default("#333333")
+  icon  String?
 
   // Relations
-  customers         Customer[]
+  customers Customer[]
 
   @@unique([programId, level])
   @@index([programId, requiredPoints])
@@ -233,54 +266,54 @@ model Tier {
 }
 
 model Redemption {
-  id          String   @id @default(cuid())
-  customerId  String
-  rewardId    String
-  pointsUsed  Int
+  id           String    @id @default(cuid())
+  customerId   String
+  rewardId     String
+  pointsUsed   Int
   discountCode String?
-  status      String   @default("pending") // pending, used, expired
-  usedAt      DateTime?
-  expiresAt   DateTime?
-  createdAt   DateTime @default(now())
+  status       String    @default("pending") // pending, used, expired
+  usedAt       DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
 
-  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  reward      Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reward   Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
 
   @@map("redemptions")
 }
 
 model Campaign {
-  id          String   @id @default(cuid())
-  programId   String
-  program     LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  id        String         @id @default(cuid())
+  programId String
+  program   LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
 
   name        String
   description String?
-  type        String   // bonus_points, double_points, special_reward
+  type        String // bonus_points, double_points, special_reward
   active      Boolean  @default(true)
   startDate   DateTime
   endDate     DateTime
-  rules       Json?    // Campaign rules as JSON
+  rules       Json? // Campaign rules as JSON
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("campaigns")
 }
 
 model WebhookEvent {
-  id          String   @id @default(cuid())
-  shopId      String
-  shop        Shop     @relation(fields: [shopId], references: [id])
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id])
 
-  eventType   String   // orders/create, customers/update, etc.
-  eventId     String   // Shopify event ID for deduplication
-  payload     Json
-  processed   Boolean  @default(false)
+  eventType       String // orders/create, customers/update, etc.
+  eventId         String // Shopify event ID for deduplication
+  payload         Json
+  processed       Boolean @default(false)
   processingError String?
-  metadata    Json?    // For retry counts and other metadata
+  metadata        Json? // For retry counts and other metadata
 
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   processedAt DateTime?
 
   @@unique([shopId, eventId])
