@@ -81,14 +81,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     return json(result, { status: result.success ? 200 : 422 });
   } catch (error) {
-    console.error("Setup theme installation error:", error);
-    return json(
-      {
-        success: false,
-        message: formatThemeError(error),
-      },
-      { status: 500 },
-    );
+    console.error("Setup theme installation error:", {
+      shop: session.shop,
+      themeId,
+      actionType,
+      error,
+    });
+
+    return json({
+      success: false,
+      message: formatThemeError(error),
+    });
   }
 };
 

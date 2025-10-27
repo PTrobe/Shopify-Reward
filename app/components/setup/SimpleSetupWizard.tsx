@@ -188,6 +188,22 @@ export function SimpleSetupWizard() {
     }
   }, [persistenceKey]);
 
+  const resetWizard = useCallback(() => {
+    clearPersistedState();
+    setState(initialState);
+  }, [clearPersistedState]);
+
+  // Reset installation status when entering step 5 (unless already complete)
+  useEffect(() => {
+    if (state.step === 5 && state.installationStatus === 'installing') {
+      setState(prev => ({
+        ...prev,
+        installationStatus: 'idle',
+        installationMessage: ''
+      }));
+    }
+  }, [state.step, state.installationStatus]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -196,6 +212,11 @@ export function SimpleSetupWizard() {
       if (stored) {
         const parsed = JSON.parse(stored) as Partial<WizardState>;
         if (parsed && typeof parsed === 'object') {
+          // Clean up any stuck installation status from localStorage
+          if (parsed.installationStatus === 'installing') {
+            parsed.installationStatus = 'idle';
+            parsed.installationMessage = '';
+          }
           setState((prev) => ({ ...prev, ...parsed }));
         }
       }
@@ -393,6 +414,11 @@ export function SimpleSetupWizard() {
 
     if (!selectedThemeId) {
       setErrors(['No available theme to install into.']);
+      setState((prev) => ({
+        ...prev,
+        installationStatus: 'error',
+        installationMessage: 'Select a theme before installing.',
+      }));
       return;
     }
 
@@ -1835,11 +1861,18 @@ export function SimpleSetupWizard() {
               <Box padding="400">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Box>
-                    {!isFirstStep && (
-                      <Button onClick={prevStep}>
-                        Back
-                      </Button>
-                    )}
+                    <ButtonGroup>
+                      {!isFirstStep && (
+                        <Button onClick={prevStep}>
+                          Back
+                        </Button>
+                      )}
+                      {(state.installationStatus === 'installing' || state.installationStatus === 'error') && (
+                        <Button variant="plain" tone="critical" onClick={resetWizard}>
+                          Start Over
+                        </Button>
+                      )}
+                    </ButtonGroup>
                   </Box>
                   <Box>
                     <ButtonGroup>

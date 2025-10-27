@@ -108,7 +108,20 @@ async function upsertAsset(
   key: string,
   value: string,
 ) {
-  const numericThemeId = assertValidThemeId(themeId);
+  console.log('[Loyco] About to save asset:', { themeId, key, hasAdmin: !!admin });
+  console.log('[Loyco] Admin structure:', {
+    hasRest: !!admin?.rest,
+    hasResources: !!admin?.rest?.resources,
+    hasAsset: !!admin?.rest?.resources?.Asset,
+    assetType: typeof admin?.rest?.resources?.Asset,
+    assetKeys: admin?.rest?.resources?.Asset ? Object.getOwnPropertyNames(admin.rest.resources.Asset) : 'N/A'
+  });
+
+  // Use the exact same pattern as the working api.theme.install.tsx
+  const numericThemeId = Number(themeId);
+  if (Number.isNaN(numericThemeId)) {
+    throw new Error(`Invalid theme id "${themeId}"`);
+  }
 
   await admin.rest.resources.Asset.save({
     session,
