@@ -381,6 +381,12 @@ export function SimpleSetupWizard() {
   };
 
   const installThemeBlocks = () => {
+    setState((prev) => ({
+      ...prev,
+      installationStatus: 'installing',
+      installationMessage: '',
+    }));
+
     const selectedThemeId =
       state.selectedTheme ||
       String(availableThemes.find((theme) => theme.role === 'main')?.id ?? availableThemes[0]?.id ?? '');
@@ -391,12 +397,6 @@ export function SimpleSetupWizard() {
     }
 
     console.log('🛠️ Installing theme blocks using Remix fetcher...', { selectedThemeId, availableThemes });
-
-    setState((prev) => ({
-      ...prev,
-      installationStatus: 'installing',
-      installationMessage: '',
-    }));
 
     console.log('🛠️ Submitting to setup action with:', {
       action: 'install_all',
