@@ -9,8 +9,17 @@ interface PersistSetupStateInput {
 }
 
 export async function loadSetupProgress(shopId: string) {
+  // shopId is actually shopifyDomain, we need to find the actual Shop record first
+  const shop = await prisma.shop.findUnique({
+    where: { shopifyDomain: shopId },
+  });
+
+  if (!shop) {
+    return null;
+  }
+
   return prisma.setupProgress.findUnique({
-    where: { shopId },
+    where: { shopId: shop.id },
   });
 }
 
@@ -21,10 +30,19 @@ export async function persistSetupProgress({
   installationStatus,
   installationMessage,
 }: PersistSetupStateInput) {
+  // shopId is actually shopifyDomain, we need to find the actual Shop record
+  const shop = await prisma.shop.findUnique({
+    where: { shopifyDomain: shopId },
+  });
+
+  if (!shop) {
+    throw new Error(`Shop not found for domain: ${shopId}`);
+  }
+
   return prisma.setupProgress.upsert({
-    where: { shopId },
+    where: { shopId: shop.id },
     create: {
-      shopId,
+      shopId: shop.id,
       currentStep,
       persistedState: state,
       installationStatus: installationStatus ?? "pending",
@@ -41,7 +59,16 @@ export async function persistSetupProgress({
 }
 
 export async function clearSetupProgress(shopId: string) {
+  // shopId is actually shopifyDomain, we need to find the actual Shop record
+  const shop = await prisma.shop.findUnique({
+    where: { shopifyDomain: shopId },
+  });
+
+  if (!shop) {
+    return; // Nothing to clear if shop doesn't exist
+  }
+
   await prisma.setupProgress.deleteMany({
-    where: { shopId },
+    where: { shopId: shop.id },
   });
 }

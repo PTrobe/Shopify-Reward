@@ -13,9 +13,18 @@ export async function enqueueThemeInstallJob({
   action: string;
   payload?: Record<string, unknown>;
 }) {
+  // shopId is actually shopifyDomain, we need to find the actual Shop record
+  const shop = await prisma.shop.findUnique({
+    where: { shopifyDomain: shopId },
+  });
+
+  if (!shop) {
+    throw new Error(`Shop not found for domain: ${shopId}`);
+  }
+
   return prisma.themeInstallJob.create({
     data: {
-      shopId,
+      shopId: shop.id,
       themeId,
       action,
       status: "queued",
