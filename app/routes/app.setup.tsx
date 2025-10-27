@@ -59,27 +59,53 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const installer = new ThemeInstaller({ admin, session, themeId });
 
-  let result: ThemeInstallResult;
+  try {
+    let result: ThemeInstallResult;
 
-  switch (actionType) {
-    case "install_header_block":
-      result = await installer.installHeaderBlock();
-      break;
-    case "install_customer_page":
-      result = await installer.installCustomerPage();
-      break;
-    case "install_all":
-      result = await installer.installAll();
-      break;
-    case "uninstall":
-      result = await installer.uninstallAll();
-      break;
-    default:
-      return json({ success: false, message: "Unsupported theme action." }, { status: 400 });
+    switch (actionType) {
+      case "install_header_block":
+        result = await installer.installHeaderBlock();
+        break;
+      case "install_customer_page":
+        result = await installer.installCustomerPage();
+        break;
+      case "install_all":
+        result = await installer.installAll();
+        break;
+      case "uninstall":
+        result = await installer.uninstallAll();
+        break;
+      default:
+        return json({ success: false, message: "Unsupported theme action." }, { status: 400 });
+    }
+
+    return json(result, { status: result.success ? 200 : 422 });
+  } catch (error) {
+    console.error("Setup theme installation error:", error);
+    return json(
+      {
+        success: false,
+        message: formatThemeError(error),
+      },
+      { status: 500 },
+    );
+  }
+};
+
+function formatThemeError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
   }
 
-  return json(result, { status: result.success ? 200 : 422 });
-};
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") {
+      return message;
+    }
+  }
+
+  return "Unexpected error while installing loyalty blocks.";
+}
 
 export default function Setup() {
   return <SimpleSetupWizard />;
