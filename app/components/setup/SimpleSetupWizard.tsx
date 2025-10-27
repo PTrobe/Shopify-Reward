@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useLoaderData, useFetcher, Form } from '@remix-run/react';
+import { useLoaderData, Form } from '@remix-run/react';
 import {
   Page,
   Layout,
@@ -106,7 +106,6 @@ const TOTAL_STEPS = 8;
 
 export function SimpleSetupWizard() {
   const loaderData = useLoaderData<SetupLoaderData>();
-  const fetcher = useFetcher<ThemeActionResponse>();
 
   const [state, setState] = useState<WizardState>({
     step: 1,
@@ -380,7 +379,7 @@ export function SimpleSetupWizard() {
     setErrors(currentErrors);
   };
 
-  const installThemeBlocks = () => {
+  const installThemeBlocks = async () => {
     const selectedThemeId =
       state.selectedTheme ||
       String(availableThemes.find((theme) => theme.role === 'main')?.id ?? availableThemes[0]?.id ?? '');
@@ -390,7 +389,7 @@ export function SimpleSetupWizard() {
       return;
     }
 
-    console.log('🛠️ Installing theme blocks using Remix fetcher...', { selectedThemeId, availableThemes });
+    console.log('🛠️ Installing theme blocks via fetch...', { selectedThemeId, availableThemes });
 
     setState((prev) => ({
       ...prev,
@@ -398,51 +397,58 @@ export function SimpleSetupWizard() {
       installationMessage: '',
     }));
 
-    // Use Remix fetcher for server-side action
-    console.log('🛠️ Submitting to setup action with:', {
+    console.log('🛠️ Submitting to theme API with:', {
       action: 'install_all',
-      themeId: selectedThemeId
+      themeId: selectedThemeId,
     });
 
-    fetcher.submit(
-      { action: 'install_all', themeId: selectedThemeId },
-      { method: 'post', action: '/api/admin/theme' }
-    );
-  };
+    try {
+      const response = await fetch('/api/admin/theme', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'install_all', themeId: selectedThemeId }),
+      });
 
-  // Handle fetcher response
-  useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data) {
-      console.log('🛠️ Fetcher response:', fetcher.data);
+      const result: ThemeActionResponse = await response
+        .json()
+        .catch(() => ({ success: false, message: 'Invalid response from server.' }));
 
-      if (fetcher.data.success) {
-        setState((prev) => ({
-          ...prev,
-          installationStatus: 'complete',
-          installationMessage: fetcher.data.message || 'Loyalty blocks installed successfully.',
-        }));
+      console.log('🛠️ Theme install response:', { status: response.status, result });
 
-        setTimeout(() => {
-          setState((prev) => ({
-            ...prev,
-            step: Math.min(prev.step + 1, TOTAL_STEPS),
-          }));
-        }, 1800);
-      } else {
-        const message = fetcher.data.message || fetcher.data.error || 'Theme installation failed. Please try again.';
-        console.error('Theme installation failed:', fetcher.data);
+      if (!response.ok || !result?.success) {
+        const errorMessage = result?.message || result?.error || 'Theme installation failed. Please retry.';
         setState((prev) => ({
           ...prev,
           installationStatus: 'error',
-          installationMessage: message,
+          installationMessage: errorMessage,
         }));
+        return;
       }
-    } else if (fetcher.state === 'idle' && fetcher.data === undefined) {
-      // Initial state, do nothing
-    } else if (fetcher.state === 'submitting' || fetcher.state === 'loading') {
-      console.log('🛠️ Fetcher state:', fetcher.state);
+
+      setState((prev) => ({
+        ...prev,
+        installationStatus: 'complete',
+        installationMessage: result?.message || 'Loyalty blocks installed successfully.',
+      }));
+
+      setTimeout(() => {
+        setState((prev) => ({
+          ...prev,
+          step: Math.min(prev.step + 1, TOTAL_STEPS),
+        }));
+      }, 1200);
+    } catch (error) {
+      console.error('Theme installation error:', error);
+      setState((prev) => ({
+        ...prev,
+        installationStatus: 'error',
+        installationMessage: 'Unexpected error while installing loyalty blocks. Please try again.',
+      }));
     }
-  }, [fetcher.state, fetcher.data]);
+  };
 
   const launchProgram = () => {
     setState((prev) => ({ ...prev, programLaunched: true }));

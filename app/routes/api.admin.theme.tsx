@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import { ThemeInstaller } from "../services/theme.server";
+import { ThemeInstaller, type ThemeInstallResult } from "../services/theme.server";
 
 interface ThemeAsset {
   key: string;
@@ -24,7 +24,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
 
     const themes = themesResponse.data.map((theme: any) => ({
-      id: theme.id,
+      id: String(theme.id),
       name: theme.name,
       role: theme.role,
     }));
@@ -41,12 +41,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
 
   try {
-    const formData = await request.formData();
-    const action = formData.get("action");
-    const themeId = formData.get("themeId");
+    const contentType = request.headers.get("content-type") || "";
+    let actionType: string | null = null;
+    let themeId: string | null = null;
+
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      actionType = typeof body?.action === "string" ? body.action : null;
+      themeId = typeof body?.themeId === "string" ? body.themeId : null;
+    } else {
+      const formData = await request.formData();
+      const actionValue = formData.get("action");
+      const themeValue = formData.get("themeId");
+      actionType = typeof actionValue === "string" ? actionValue : null;
+      themeId = typeof themeValue === "string" ? themeValue : null;
+    }
 
     if (!themeId) {
-      return json({ success: false, message: "Theme ID is required." });
+      return json({ success: false, message: "Theme ID is required." }, { status: 400 });
     }
 
     const installer = new ThemeInstaller({
@@ -55,21 +67,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       themeId: themeId as string,
     });
 
-    switch (action) {
+    switch (actionType) {
       case "install_header_block":
-        return json(await installer.installHeaderBlock());
+        return respondWithResult(await installer.installHeaderBlock());
 
       case "install_customer_page":
-        return json(await installer.installCustomerPage());
+        return respondWithResult(await installer.installCustomerPage());
 
       case "install_all":
-        return json(await installer.installAll());
+        return respondWithResult(await installer.installAll());
 
       case "uninstall":
-        return json(await installer.uninstallAll());
+        return respondWithResult(await installer.uninstallAll());
 
       default:
-        return json({ success: false, message: "Invalid theme action." });
+        return json({ success: false, message: "Invalid theme action." }, { status: 400 });
     }
   } catch (error) {
     console.error("Error managing theme:", error);
@@ -94,4 +106,8 @@ function formatThemeError(error: unknown): string {
   }
 
   return "Unexpected error while installing loyalty blocks.";
+}
+
+function respondWithResult(result: ThemeInstallResult) {
+  return json(result, { status: result.success ? 200 : 422 });
 }
