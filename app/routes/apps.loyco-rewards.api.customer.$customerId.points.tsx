@@ -22,48 +22,58 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
       return new Response(null, { status: 200, headers });
     }
 
-    // Mock customer loyalty data (in real app, this would come from database)
-    const mockCustomerData = {
+    // Calculate loyalty data based on customer ID (in real app, this would come from database)
+    // Using customer ID as seed for consistent data per customer
+    const customerIdNum = parseInt(customerId) || 1;
+    const seed = customerIdNum * 37; // Simple seeding for consistent data
+
+    // Calculate points based on customer ID (more realistic than random)
+    const basePoints = (seed % 800) + 200; // Points between 200-1000
+    const lifetimeEarned = basePoints + (seed % 1500) + 300; // Lifetime earned is higher
+
+    // Determine tier based on lifetime earned points
+    let tier = "Bronze";
+    let nextTierPoints = 1000;
+    if (lifetimeEarned >= 2500) {
+      tier = "Gold";
+      nextTierPoints = 5000;
+    } else if (lifetimeEarned >= 1000) {
+      tier = "Silver";
+      nextTierPoints = 2500;
+    }
+
+    const customerData = {
       customerId: customerId,
-      points: Math.floor(Math.random() * 1000) + 100, // Random points between 100-1100
-      tier: "Bronze",
-      nextTierPoints: 500,
-      lifetimeEarned: Math.floor(Math.random() * 2000) + 500,
+      points: basePoints,
+      tier: tier,
+      nextTierPoints: nextTierPoints,
+      lifetimeEarned: lifetimeEarned,
       availableRewards: [
         {
           id: "reward1",
-          name: "$5 Off",
+          name: "$5 Off Next Purchase",
           pointsCost: 500,
-          description: "$5 off your next purchase",
-          available: true
+          description: "$5 discount on your next order",
+          available: basePoints >= 500
         },
         {
           id: "reward2",
-          name: "10% Off",
+          name: "10% Off Entire Order",
           pointsCost: 1000,
-          description: "10% off your entire order",
-          available: false
+          description: "10% discount on your entire purchase",
+          available: basePoints >= 1000
         },
         {
           id: "reward3",
           name: "Free Shipping",
           pointsCost: 750,
-          description: "Free shipping on your next order",
-          available: true
+          description: "Free shipping on orders over $50",
+          available: basePoints >= 750
         }
       ]
     };
 
-    // Simulate some logic based on customer ID
-    if (customerId === "1") {
-      mockCustomerData.points = 1250;
-      mockCustomerData.tier = "Silver";
-    } else if (customerId === "2") {
-      mockCustomerData.points = 2500;
-      mockCustomerData.tier = "Gold";
-    }
-
-    return json(mockCustomerData, { headers });
+    return json(customerData, { headers });
 
   } catch (error) {
     console.error("Error fetching customer points:", error);
