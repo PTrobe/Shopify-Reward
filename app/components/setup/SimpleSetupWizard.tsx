@@ -49,17 +49,21 @@ type ThemeActionResponse = {
   jobStatus?: string;
 };
 
-type SetupProgressData = {
+type SetupState = {
   currentStep: number;
-  persistedState: Record<string, unknown> | null;
-  installationStatus: string;
-  installationMessage: string | null;
+  selectedTheme?: {
+    id: string;
+    name: string;
+  };
+  installationStatus?: "idle" | "running" | "complete" | "error";
+  installationMessage?: string;
+  completed?: boolean;
 };
 
 type SetupLoaderData = {
   shop: string;
   themes: ThemeSummary[];
-  progress: SetupProgressData | null;
+  setupState: SetupState;
 };
 
 interface WizardState {
@@ -186,15 +190,14 @@ export function SimpleSetupWizard() {
   const [isReadyToPersist, setIsReadyToPersist] = useState(false);
 
   const initialStateFromServer = useMemo(() => {
-    const progress = loaderData.progress;
-    const persistedState = (progress?.persistedState ?? {}) as Partial<WizardState>;
+    const setupState = loaderData.setupState;
     return buildInitialState({
-      ...persistedState,
-      step: progress?.currentStep ?? persistedState.step ?? 1,
-      installationStatus: progress?.installationStatus ?? persistedState.installationStatus ?? 'pending',
-      installationMessage: progress?.installationMessage ?? persistedState.installationMessage ?? '',
+      step: setupState.currentStep || 1,
+      selectedTheme: setupState.selectedTheme?.id || '',
+      installationStatus: setupState.installationStatus === 'running' ? 'installing' : (setupState.installationStatus === 'complete' ? 'complete' : (setupState.installationStatus === 'error' ? 'error' : 'pending')),
+      installationMessage: setupState.installationMessage || '',
     });
-  }, [loaderData.progress]);
+  }, [loaderData.setupState]);
 
   useEffect(() => {
     setState(initialStateFromServer);
@@ -221,22 +224,25 @@ export function SimpleSetupWizard() {
     if (!isReadyToPersist) return;
 
     const handle = window.setTimeout(() => {
+      const setupState = {
+        currentStep: state.step,
+        selectedTheme: state.selectedTheme ? {
+          id: state.selectedTheme,
+          name: availableThemes.find(t => t.id === state.selectedTheme)?.name || 'Selected theme'
+        } : undefined,
+        installationStatus: state.installationStatus === 'installing' ? 'running' : (state.installationStatus === 'complete' ? 'complete' : (state.installationStatus === 'error' ? 'error' : 'idle')),
+        installationMessage: state.installationMessage || undefined,
+        completed: state.installationStatus === 'complete'
+      };
+
       const formData = new FormData();
-      formData.append('intent', 'persist');
-      formData.append('currentStep', String(state.step));
-      formData.append('installationStatus', state.installationStatus);
-      if (state.installationMessage) {
-        formData.append('installationMessage', state.installationMessage);
-      }
-      formData.append('state', JSON.stringify({
-        ...state,
-        rewardTiers: state.rewardTiers.map((tier) => ({ ...tier })),
-      }));
+      formData.append('intent', 'updateState');
+      formData.append('state', JSON.stringify(setupState));
       persistFetcher.submit(formData, { method: 'post' });
     }, 600);
 
     return () => window.clearTimeout(handle);
-  }, [state, isReadyToPersist, persistFetcher]);
+  }, [state.step, state.selectedTheme, state.installationStatus, state.installationMessage, isReadyToPersist, persistFetcher]);
 
   // Use themes from server-side loader
   const availableThemes = loaderData.themes;
@@ -430,8 +436,13 @@ export function SimpleSetupWizard() {
       themeId: selectedThemeId
     });
 
+    const selectedTheme = availableThemes.find(t => t.id === selectedThemeId);
     installFetcher.submit(
-      { action: 'install_all', themeId: selectedThemeId },
+      {
+        action: 'install_all',
+        themeId: selectedThemeId,
+        themeName: selectedTheme?.name || 'Selected theme'
+      },
       { method: 'post' }
     );
   };
@@ -441,11 +452,11 @@ export function SimpleSetupWizard() {
     if (installFetcher.state === 'idle' && installFetcher.data) {
       console.log('🛠️ Fetcher response:', installFetcher.data);
 
-      if (installFetcher.data.success) {
+      if (installFetcher.data?.success) {
         setState((prev) => ({
           ...prev,
           installationStatus: 'complete',
-          installationMessage: installFetcher.data.message || 'Loyalty blocks installed successfully.',
+          installationMessage: installFetcher.data?.message || 'Loyalty blocks installed successfully.',
         }));
 
         setTimeout(() => {
@@ -455,7 +466,7 @@ export function SimpleSetupWizard() {
           }));
         }, 1200);
       } else {
-        const message = installFetcher.data.message || installFetcher.data.error || 'Theme installation failed. Please try again.';
+        const message = installFetcher.data?.message || installFetcher.data?.error || 'Theme installation failed. Please try again.';
         console.error('Theme installation failed:', installFetcher.data);
         setState((prev) => ({
           ...prev,

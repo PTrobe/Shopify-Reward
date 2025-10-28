@@ -3,20 +3,29 @@ import { json, redirect } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { SimpleSetupWizard } from "../components/setup/SimpleSetupWizard";
 import { ThemeInstaller, type ThemeInstallResult } from "../services/theme.server";
-import {
-  clearSetupProgress,
-  loadSetupProgress,
-  persistSetupProgress,
-} from "../services/setupProgress.server";
-import {
-  enqueueThemeInstallJob,
-  markJobFailed,
-  markJobRunning,
-  markJobSucceeded,
-} from "../services/themeInstallJob.server";
+import { getSession, commitSession } from "../sessions.server";
+
+// Session-based setup state interface
+interface SetupState {
+  currentStep: number;
+  selectedTheme?: {
+    id: string;
+    name: string;
+  };
+  installationStatus?: "idle" | "running" | "complete" | "error";
+  installationMessage?: string;
+  completed?: boolean;
+}
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
+
+  // Get setup state from session
+  const userSession = await getSession(request.headers.get("Cookie"));
+  const setupState: SetupState = userSession.get("setupState") || {
+    currentStep: 1,
+    installationStatus: "idle",
+  };
 
   try {
     // Fetch themes server-side where authentication works properly
@@ -30,12 +39,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       role: theme.role,
     }));
 
-    const progress = await loadSetupProgress(session.shop);
-
     return json({
       shop: session.shop,
       themes,
-      progress,
+      setupState,
     });
   } catch (error) {
     console.error("Error fetching themes in setup loader:", error);
@@ -46,58 +53,60 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         { id: 'dawn', name: 'Dawn', role: 'main' },
         { id: 'refresh', name: 'Refresh', role: 'unpublished' },
       ],
-      progress: null,
+      setupState,
     });
   }
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-
+  const userSession = await getSession(request.headers.get("Cookie"));
   const formData = await request.formData();
   const intent = formData.get("intent");
 
+  // Handle navigation and state updates
   if (intent === "launch") {
     return redirect("/app");
   }
 
   if (intent === "reset") {
-    await clearSetupProgress(session.shop);
-    return json({ success: true });
+    userSession.unset("setupState");
+    return json(
+      { success: true },
+      {
+        headers: {
+          "Set-Cookie": await commitSession(userSession),
+        },
+      }
+    );
   }
 
-  if (intent === "persist") {
-    const step = Number(formData.get("currentStep") ?? 1);
-    const serializedState = formData.get("state");
-    let parsedState: Record<string, unknown> = {};
-
-    if (typeof serializedState === "string" && serializedState.trim().length > 0) {
+  if (intent === "updateState") {
+    const stateJson = formData.get("state");
+    if (typeof stateJson === "string") {
       try {
-        parsedState = JSON.parse(serializedState);
+        const newState: SetupState = JSON.parse(stateJson);
+        userSession.set("setupState", newState);
+        return json(
+          { success: true },
+          {
+            headers: {
+              "Set-Cookie": await commitSession(userSession),
+            },
+          }
+        );
       } catch (error) {
-        console.warn("Failed to parse persisted setup state JSON", error);
+        console.warn("Failed to parse setup state JSON", error);
+        return json({ success: false, message: "Invalid state data" }, { status: 400 });
       }
     }
-
-    await persistSetupProgress({
-      shopId: session.shop,
-      currentStep: Number.isNaN(step) ? 1 : step,
-      state: parsedState,
-      installationStatus:
-        typeof formData.get("installationStatus") === "string"
-          ? (formData.get("installationStatus") as string)
-          : undefined,
-      installationMessage:
-        typeof formData.get("installationMessage") === "string"
-          ? (formData.get("installationMessage") as string)
-          : undefined,
-    });
-
-    return json({ success: true });
+    return json({ success: false, message: "State data required" }, { status: 400 });
   }
 
+  // Handle theme installation
   const actionType = formData.get("action");
   const themeId = formData.get("themeId");
+  const themeName = formData.get("themeName");
 
   if (!themeId || typeof themeId !== "string") {
     return json({ success: false, message: "Theme ID is required." }, { status: 400 });
@@ -107,25 +116,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return json({ success: false, message: "Theme action is required." }, { status: 400 });
   }
 
-  const installer = new ThemeInstaller({ admin, session, themeId });
-  const existingProgress = await loadSetupProgress(session.shop);
-  const stateSnapshot = (existingProgress?.persistedState ?? {}) as Record<string, unknown>;
+  // Get current setup state
+  const currentState: SetupState = userSession.get("setupState") || {
+    currentStep: 1,
+    installationStatus: "idle",
+  };
 
-  const job = await enqueueThemeInstallJob({
-    shopId: session.shop,
-    themeId,
-    action: actionType,
-  });
-
-  await markJobRunning(job.id);
-
-  await persistSetupProgress({
-    shopId: session.shop,
-    currentStep: existingProgress?.currentStep ?? 5,
-    state: stateSnapshot,
+  // Update state to show installation is running
+  const runningState: SetupState = {
+    ...currentState,
+    selectedTheme: { id: themeId, name: themeName as string || "Selected theme" },
     installationStatus: "running",
     installationMessage: "Installing loyalty blocks...",
-  });
+  };
+  userSession.set("setupState", runningState);
+
+  const installer = new ThemeInstaller({ admin, session, themeId });
 
   try {
     let result: ThemeInstallResult;
@@ -147,27 +153,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return json({ success: false, message: "Unsupported theme action." }, { status: 400 });
     }
 
-    if (result.success) {
-      await markJobSucceeded(job.id);
-    } else {
-      await markJobFailed(job.id, result.message ?? "Installation failed");
-    }
-
-    await persistSetupProgress({
-      shopId: session.shop,
-      currentStep: existingProgress?.currentStep ?? 5,
-      state: stateSnapshot,
+    // Update state with installation result
+    const finalState: SetupState = {
+      ...runningState,
       installationStatus: result.success ? "complete" : "error",
-      installationMessage: result.message ?? null,
-    });
+      installationMessage: result.message,
+      completed: result.success,
+    };
+    userSession.set("setupState", finalState);
 
     return json(
       {
         ...result,
-        jobId: job.id,
-        jobStatus: result.success ? "succeeded" : "failed",
+        setupState: finalState,
       },
-      { status: result.success ? 200 : 422 },
+      {
+        status: result.success ? 200 : 422,
+        headers: {
+          "Set-Cookie": await commitSession(userSession),
+        },
+      }
     );
   } catch (error) {
     const message = formatThemeError(error);
@@ -179,21 +184,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       error,
     });
 
-    await markJobFailed(job.id, message);
-    await persistSetupProgress({
-      shopId: session.shop,
-      currentStep: existingProgress?.currentStep ?? 5,
-      state: stateSnapshot,
+    // Update state with error
+    const errorState: SetupState = {
+      ...runningState,
       installationStatus: "error",
       installationMessage: message,
-    });
+    };
+    userSession.set("setupState", errorState);
 
-    return json({
-      success: false,
-      message,
-      jobId: job.id,
-      jobStatus: "failed",
-    });
+    return json(
+      {
+        success: false,
+        message,
+        setupState: errorState,
+      },
+      {
+        status: 500,
+        headers: {
+          "Set-Cookie": await commitSession(userSession),
+        },
+      }
+    );
   }
 };
 

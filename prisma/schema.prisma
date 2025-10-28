@@ -44,8 +44,6 @@ model Shop {
   customers      Customer[]
   transactions   Transaction[]
   webhookEvents  WebhookEvent[]
-  setupProgress  SetupProgress?
-  installJobs    ThemeInstallJob[]
 
   @@index([shopifyDomain])
   @@index([billingStatus])
@@ -172,36 +170,6 @@ model Transaction {
   @@map("transactions")
 }
 
-model SetupProgress {
-  id                  String   @id @default(cuid())
-  shopId              String   @unique
-  shop                Shop     @relation(fields: [shopId], references: [id])
-  currentStep         Int      @default(1)
-  persistedState      Json?    @default("{}")
-  installationStatus  String   @default("pending")
-  installationMessage String?  @db.Text
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  @@map("setup_progress")
-}
-
-model ThemeInstallJob {
-  id           String    @id @default(cuid())
-  shopId       String
-  shop         Shop      @relation(fields: [shopId], references: [id])
-  themeId      String
-  action       String
-  status       String    @default("queued")
-  errorMessage String?   @db.Text
-  createdAt    DateTime  @default(now())
-  startedAt    DateTime?
-  completedAt  DateTime?
-  payload      Json?
-
-  @@index([shopId, status, createdAt])
-  @@map("theme_install_jobs")
-}
 
 model Reward {
   id        String         @id @default(cuid())
