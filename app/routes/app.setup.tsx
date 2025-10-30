@@ -2,106 +2,87 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { SimpleSetupWizard } from "../components/setup/SimpleSetupWizard";
-import { ThemeInstaller, type ThemeInstallResult } from "../services/theme.server";
+import { getSession, commitSession } from "../sessions.server";
+
+// Session-based setup state interface
+interface SetupState {
+  currentStep: number;
+  completed?: boolean;
+}
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
 
-  try {
-    const themesResponse = await admin.rest.resources.Theme.all({
-      session,
-    });
+  // Get setup state from session
+  const userSession = await getSession(request.headers.get("Cookie"));
+  const setupState: SetupState = userSession.get("setupState") || {
+    currentStep: 1,
+  };
 
-    const themes = themesResponse.data.map((theme: any) => ({
-      id: String(theme.id),
-      name: theme.name,
-      role: theme.role,
-    }));
-
-    return json({
-      shop: session.shop,
-      themes,
-    });
-  } catch (error) {
-    console.error("Error fetching themes in setup loader:", error);
-
-    return json({
-      shop: session.shop,
-      themes: [
-        { id: "dawn", name: "Dawn", role: "main" },
-        { id: "refresh", name: "Refresh", role: "unpublished" },
-      ],
-    });
-  }
+  return json({
+    shop: session.shop,
+    setupState,
+  });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    const { admin, session } = await authenticate.admin(request);
+    const { session } = await authenticate.admin(request);
+    const userSession = await getSession(request.headers.get("Cookie"));
     const formData = await request.formData();
     const intent = formData.get("intent");
 
+    // Handle navigation and state updates
     if (intent === "launch") {
       return redirect("/app");
     }
 
-    const actionType = formData.get("action");
-    const themeId = formData.get("themeId");
-
-    if (!themeId || typeof themeId !== "string") {
-      return json({ success: false, message: "Theme ID is required." }, { status: 400 });
+    if (intent === "reset") {
+      userSession.unset("setupState");
+      return json(
+        { success: true },
+        {
+          headers: {
+            "Set-Cookie": await commitSession(userSession),
+          },
+        }
+      );
     }
 
-    if (!actionType || typeof actionType !== "string") {
-      return json({ success: false, message: "Theme action is required." }, { status: 400 });
+    if (intent === "updateState") {
+      const stateJson = formData.get("state");
+      if (typeof stateJson === "string") {
+        try {
+          const newState: SetupState = JSON.parse(stateJson);
+          userSession.set("setupState", newState);
+          return json(
+            { success: true },
+            {
+              headers: {
+                "Set-Cookie": await commitSession(userSession),
+              },
+            }
+          );
+        } catch (error) {
+          console.warn("Failed to parse setup state JSON", error);
+          return json({ success: false, message: "Invalid state data" }, { status: 400 });
+        }
+      }
+      return json({ success: false, message: "State data required" }, { status: 400 });
     }
 
-    const installer = new ThemeInstaller({ admin, session, themeId });
-
-    let result: ThemeInstallResult;
-
-    switch (actionType) {
-      case "install_header_block":
-        result = await installer.installHeaderBlock();
-        break;
-      case "install_customer_page":
-        result = await installer.installCustomerPage();
-        break;
-      case "install_all":
-        result = await installer.installAll();
-        break;
-      case "uninstall":
-        result = await installer.uninstallAll();
-        break;
-      default:
-        return json({ success: false, message: "Unsupported theme action." }, { status: 400 });
-    }
-
-    return json(result, { status: result.success ? 200 : 422 });
+    // For any other actions, just return success
+    // Theme App Extensions are automatically deployed via Shopify CLI
+    return json({ success: true, message: "Theme App Extensions are automatically available" });
   } catch (error) {
-    console.error("Setup theme installation error:", error);
-
+    console.error("Setup action error:", error);
     return json({
       success: false,
-      message: formatThemeError(error),
+      message: "An error occurred during setup",
     }, { status: 500 });
   }
 };
 
-function formatThemeError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  if (error && typeof error === "object" && "message" in error) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === "string") {
-      return message;
-    }
-  }
-
-  return "Unexpected error while installing loyalty blocks.";
-}
 
 export default function Setup() {
   return <SimpleSetupWizard />;

@@ -1,0 +1,313 @@
+{% comment %}
+  Prominent banner block for displaying points balance and earning opportunities
+  Best used in hero sections or announcement bars
+{% endcomment %}
+
+{% assign customer_points = 0 %}
+{% assign customer_id = customer.id %}
+
+{% comment %}
+  Get real customer points from app proxy or JavaScript injection
+  For now, using placeholder data for theme editor preview
+{% endcomment %}
+{% if customer_id %}
+  {% assign customer_points = 150 %}
+{% endif %}
+
+{% comment %} Show banner with points and promotional message {% endcomment %}
+{% if block.settings.show_for_guests or customer %}
+<div class="loyco-points-banner" style="
+  background: linear-gradient(135deg, {{ block.settings.background_color }}, {{ block.settings.accent_color }});
+  padding: {{ block.settings.padding_vertical }}px {{ block.settings.padding_horizontal }}px;
+  text-align: center;
+  border-radius: {{ block.settings.border_radius }}px;
+  margin: {{ block.settings.margin_vertical }}px 0;
+  position: relative;
+  overflow: hidden;
+">
+
+  {% if block.settings.show_decorative_elements %}
+  <div class="loyco-banner-decoration" style="
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+  "></div>
+  {% endif %}
+
+  <div class="loyco-banner-content" style="position: relative; z-index: 2;">
+    {% if customer %}
+      <h3 style="
+        color: {{ block.settings.text_color }};
+        margin: 0 0 8px 0;
+        font-size: {{ block.settings.heading_size }}px;
+        font-weight: 600;
+      ">
+        {% if block.settings.custom_heading != blank %}
+          {{ block.settings.custom_heading | replace: '{points}', customer_points }}
+        {% else %}
+          You have {{ customer_points }} {{ block.settings.points_currency }}!
+        {% endif %}
+      </h3>
+
+      {% if block.settings.show_next_reward %}
+      <p style="
+        color: {{ block.settings.text_color }};
+        margin: 0 0 12px 0;
+        font-size: {{ block.settings.subtext_size }}px;
+        opacity: 0.9;
+      ">
+        {% assign points_needed = 250 | minus: customer_points %}
+        {% if points_needed > 0 %}
+          Only {{ points_needed }} more points until your next reward!
+        {% else %}
+          🎉 You have rewards available!
+        {% endif %}
+      </p>
+      {% endif %}
+
+    {% else %}
+      <h3 style="
+        color: {{ block.settings.text_color }};
+        margin: 0 0 8px 0;
+        font-size: {{ block.settings.heading_size }}px;
+        font-weight: 600;
+      ">
+        {{ block.settings.guest_heading | default: 'Join our loyalty program!' }}
+      </h3>
+
+      <p style="
+        color: {{ block.settings.text_color }};
+        margin: 0 0 12px 0;
+        font-size: {{ block.settings.subtext_size }}px;
+        opacity: 0.9;
+      ">
+        {{ block.settings.guest_message | default: 'Earn points with every purchase and unlock exclusive rewards.' }}
+      </p>
+    {% endif %}
+
+    {% if block.settings.show_cta_button %}
+    <a href="{{ block.settings.cta_link | default: '/account' }}"
+       class="loyco-banner-cta"
+       style="
+         display: inline-block;
+         background: {{ block.settings.button_color }};
+         color: {{ block.settings.button_text_color }};
+         padding: 10px 20px;
+         border-radius: 6px;
+         text-decoration: none;
+         font-weight: 600;
+         font-size: 14px;
+         transition: all 0.3s ease;
+       ">
+      {% if customer %}
+        {{ block.settings.cta_text | default: 'View Rewards' }}
+      {% else %}
+        {{ block.settings.guest_cta_text | default: 'Sign Up Now' }}
+      {% endif %}
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.loyco-banner-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 768px) {
+  .loyco-points-banner {
+    padding: {{ block.settings.padding_vertical | divided_by: 1.5 }}px {{ block.settings.padding_horizontal | divided_by: 1.5 }}px;
+  }
+
+  .loyco-points-banner h3 {
+    font-size: {{ block.settings.heading_size | times: 0.85 }}px;
+  }
+
+  .loyco-points-banner p {
+    font-size: {{ block.settings.subtext_size | times: 0.9 }}px;
+  }
+}
+</style>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Loyalty Points Banner",
+  "target": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Appearance"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#4F46E5"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent Color",
+      "default": "#6366F1"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "range",
+      "id": "padding_vertical",
+      "label": "Vertical Padding",
+      "min": 10,
+      "max": 60,
+      "step": 5,
+      "default": 30
+    },
+    {
+      "type": "range",
+      "id": "padding_horizontal",
+      "label": "Horizontal Padding",
+      "min": 10,
+      "max": 60,
+      "step": 5,
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Border Radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "margin_vertical",
+      "label": "Vertical Margin",
+      "min": 0,
+      "max": 40,
+      "step": 5,
+      "default": 20
+    },
+    {
+      "type": "checkbox",
+      "id": "show_decorative_elements",
+      "label": "Show decorative elements",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "text",
+      "id": "points_currency",
+      "label": "Points Currency Name",
+      "default": "points",
+      "info": "e.g., points, stars, coins"
+    },
+    {
+      "type": "text",
+      "id": "custom_heading",
+      "label": "Custom Heading (for logged in users)",
+      "placeholder": "You have {points} points!",
+      "info": "Use {points} to show the points balance"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "Heading Font Size",
+      "min": 16,
+      "max": 32,
+      "step": 2,
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "subtext_size",
+      "label": "Subtext Font Size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "default": 16
+    },
+    {
+      "type": "checkbox",
+      "id": "show_next_reward",
+      "label": "Show progress to next reward",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Guest Users"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_for_guests",
+      "label": "Show banner for guest users",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "guest_heading",
+      "label": "Guest Heading",
+      "default": "Join our loyalty program!"
+    },
+    {
+      "type": "textarea",
+      "id": "guest_message",
+      "label": "Guest Message",
+      "default": "Earn points with every purchase and unlock exclusive rewards."
+    },
+    {
+      "type": "header",
+      "content": "Call to Action"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_cta_button",
+      "label": "Show call-to-action button",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "cta_text",
+      "label": "Button Text (logged in users)",
+      "default": "View Rewards"
+    },
+    {
+      "type": "text",
+      "id": "guest_cta_text",
+      "label": "Button Text (guest users)",
+      "default": "Sign Up Now"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "Button Link",
+      "default": "/account"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button Background Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button Text Color",
+      "default": "#4F46E5"
+    }
+  ]
+}
+{% endschema %}

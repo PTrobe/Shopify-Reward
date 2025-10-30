@@ -1,0 +1,347 @@
+{% comment %}
+  Product points earning display block
+  Shows how many points customers will earn for purchasing this product
+{% endcomment %}
+
+{% assign product_price = product.price | default: 2500 %}
+{% assign points_per_dollar = block.settings.points_per_dollar | default: 1 %}
+{% assign points_earned = product_price | divided_by: 100 | times: points_per_dollar %}
+
+{% comment %} Only show if there's a product and points are earned {% endcomment %}
+{% if product and points_earned > 0 %}
+<div class="loyco-product-points" style="
+  background: {{ block.settings.background_color }};
+  border: 1px solid {{ block.settings.border_color }};
+  border-radius: {{ block.settings.border_radius }}px;
+  padding: {{ block.settings.padding }}px;
+  margin: {{ block.settings.margin }}px 0;
+  display: {{ block.settings.display_style }};
+  align-items: center;
+  gap: 8px;
+  {% if block.settings.display_style == 'flex' %}justify-content: {{ block.settings.alignment }};{% else %}text-align: {{ block.settings.alignment }};{% endif %}
+">
+
+  {% if block.settings.show_icon %}
+  <span class="loyco-points-icon" style="
+    font-size: {{ block.settings.icon_size }}px;
+    color: {{ block.settings.icon_color }};
+    line-height: 1;
+  ">
+    {% case block.settings.icon_type %}
+      {% when 'star' %}★
+      {% when 'coin' %}🪙
+      {% when 'diamond' %}💎
+      {% when 'crown' %}👑
+      {% else %}⭐
+    {% endcase %}
+  </span>
+  {% endif %}
+
+  <div class="loyco-points-text">
+    {% if block.settings.custom_message != blank %}
+      <span style="
+        color: {{ block.settings.text_color }};
+        font-size: {{ block.settings.text_size }}px;
+        font-weight: {{ block.settings.font_weight }};
+        line-height: 1.4;
+      ">
+        {{ block.settings.custom_message | replace: '{points}', points_earned | replace: '{currency}', block.settings.points_currency }}
+      </span>
+    {% else %}
+      <span style="
+        color: {{ block.settings.text_color }};
+        font-size: {{ block.settings.text_size }}px;
+        font-weight: {{ block.settings.font_weight }};
+        line-height: 1.4;
+      ">
+        {% if customer %}
+          Earn {{ points_earned }} {{ block.settings.points_currency }} with this purchase
+        {% else %}
+          Sign up and earn {{ points_earned }} {{ block.settings.points_currency }}
+        {% endif %}
+      </span>
+    {% endif %}
+
+    {% if block.settings.show_bonus_message and block.settings.bonus_message != blank %}
+    <div class="loyco-bonus-message" style="
+      color: {{ block.settings.bonus_color }};
+      font-size: {{ block.settings.text_size | times: 0.85 }}px;
+      margin-top: 4px;
+      font-style: italic;
+    ">
+      {{ block.settings.bonus_message }}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if block.settings.show_total_needed and block.settings.reward_threshold > 0 %}
+  <div class="loyco-progress-hint" style="
+    color: {{ block.settings.hint_color }};
+    font-size: {{ block.settings.text_size | times: 0.8 }}px;
+    margin-left: auto;
+    white-space: nowrap;
+  ">
+    {% assign remaining = block.settings.reward_threshold | minus: points_earned %}
+    {% if remaining > 0 %}
+      {{ remaining }} more for reward
+    {% else %}
+      🎉 Reward unlocked!
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.loyco-product-points {
+  transition: all 0.3s ease;
+}
+
+{% if block.settings.enable_hover_effect %}
+.loyco-product-points:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: {{ block.settings.hover_border_color }};
+}
+{% endif %}
+
+@media (max-width: 768px) {
+  .loyco-product-points {
+    padding: {{ block.settings.padding | times: 0.75 }}px;
+    font-size: {{ block.settings.text_size | times: 0.9 }}px;
+  }
+
+  .loyco-progress-hint {
+    display: {% if block.settings.hide_progress_mobile %}none{% else %}block{% endif %};
+    margin-left: 0;
+    margin-top: 4px;
+  }
+}
+</style>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Product Points Earning",
+  "target": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Points Configuration"
+    },
+    {
+      "type": "number",
+      "id": "points_per_dollar",
+      "label": "Points per dollar spent",
+      "default": 1
+    },
+    {
+      "type": "text",
+      "id": "points_currency",
+      "label": "Points Currency Name",
+      "default": "points",
+      "info": "e.g., points, stars, coins"
+    },
+    {
+      "type": "textarea",
+      "id": "custom_message",
+      "label": "Custom Message",
+      "placeholder": "Earn {points} {currency} with this purchase",
+      "info": "Use {points} for points amount and {currency} for currency name"
+    },
+    {
+      "type": "header",
+      "content": "Appearance"
+    },
+    {
+      "type": "select",
+      "id": "display_style",
+      "label": "Display Style",
+      "options": [
+        { "value": "block", "label": "Stacked" },
+        { "value": "flex", "label": "Inline" }
+      ],
+      "default": "flex"
+    },
+    {
+      "type": "select",
+      "id": "alignment",
+      "label": "Alignment",
+      "options": [
+        { "value": "flex-start", "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "flex-end", "label": "Right" }
+      ],
+      "default": "flex-start"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#F3F4F6"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#E5E7EB"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#374151"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Border Radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "default": 6
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "label": "Padding",
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "margin",
+      "label": "Vertical Margin",
+      "min": 0,
+      "max": 30,
+      "step": 5,
+      "default": 15
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "label": "Text Size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "default": 14
+    },
+    {
+      "type": "select",
+      "id": "font_weight",
+      "label": "Font Weight",
+      "options": [
+        { "value": "400", "label": "Normal" },
+        { "value": "500", "label": "Medium" },
+        { "value": "600", "label": "Semi Bold" },
+        { "value": "700", "label": "Bold" }
+      ],
+      "default": "500"
+    },
+    {
+      "type": "header",
+      "content": "Icon"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_icon",
+      "label": "Show icon",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "icon_type",
+      "label": "Icon Type",
+      "options": [
+        { "value": "star", "label": "Star ★" },
+        { "value": "coin", "label": "Coin 🪙" },
+        { "value": "diamond", "label": "Diamond 💎" },
+        { "value": "crown", "label": "Crown 👑" }
+      ],
+      "default": "star"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "Icon Color",
+      "default": "#F59E0B"
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon Size",
+      "min": 12,
+      "max": 24,
+      "step": 2,
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Bonus Messages"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_bonus_message",
+      "label": "Show bonus message",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "bonus_message",
+      "label": "Bonus Message",
+      "placeholder": "Double points this week!"
+    },
+    {
+      "type": "color",
+      "id": "bonus_color",
+      "label": "Bonus Message Color",
+      "default": "#DC2626"
+    },
+    {
+      "type": "header",
+      "content": "Reward Progress"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_total_needed",
+      "label": "Show progress to reward",
+      "default": false
+    },
+    {
+      "type": "number",
+      "id": "reward_threshold",
+      "label": "Next reward threshold",
+      "default": 100
+    },
+    {
+      "type": "color",
+      "id": "hint_color",
+      "label": "Progress hint color",
+      "default": "#6B7280"
+    },
+    {
+      "type": "header",
+      "content": "Interactive Effects"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_hover_effect",
+      "label": "Enable hover effect",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "hover_border_color",
+      "label": "Hover border color",
+      "default": "#F59E0B"
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_progress_mobile",
+      "label": "Hide progress hint on mobile",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

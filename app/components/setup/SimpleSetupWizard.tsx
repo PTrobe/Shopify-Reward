@@ -567,51 +567,224 @@ export function SimpleSetupWizard() {
 
       case 5:
         return (
-          <Card>
-            <Box padding="400">
-              <Text variant="headingMd" as="h3">
-                Install Loyalty Program Blocks
-              </Text>
+          <Box>
+            <Banner title="Add Loyalty Blocks to Your Theme" tone="info">
+              <p>Your loyalty blocks are ready! Use Shopify's theme editor to add them to your storefront. This is the recommended approach for best performance and future compatibility.</p>
+            </Banner>
 
-              <Box paddingBlockStart="300">
-                <FormLayout>
-                  <Select
-                    label="Select theme"
-                    options={availableThemes.map((theme) => ({
-                      label: `${theme.name}${theme.role === 'main' ? ' (Published)' : ''}`,
-                      value: theme.id,
-                    }))}
-                    value={state.selectedTheme}
-                    onChange={(value) => updateField('selectedTheme', value)}
-                  />
-                  <Checkbox
-                    label="Create backup before installation"
-                    checked={state.backupBeforeInstall}
-                    onChange={(checked) => updateField('backupBeforeInstall', checked)}
-                  />
-                </FormLayout>
-              </Box>
+            <Box paddingBlockStart="500">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    Available Loyalty Blocks
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <div style={{ display: 'grid', gap: '16px' }}>
 
-              <Box paddingBlockStart="400">
-                <Button
-                  variant="primary"
-                  onClick={installThemeBlocks}
-                  loading={state.installationStatus === 'installing'}
-                >
-                  Install loyalty blocks
-                </Button>
-              </Box>
+                      <Card>
+                        <Box padding="300">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <Text variant="headingSm" as="h4">
+                                📍 Loyalty Points Header
+                              </Text>
+                              <Text variant="bodySm" as="p" tone="subdued">
+                                Compact header block showing customer's points balance
+                              </Text>
+                            </div>
+                            <Badge tone="success">Available</Badge>
+                          </div>
+                        </Box>
+                      </Card>
 
-              {state.installationMessage && (
-                <Box paddingBlockStart="300">
-                  <Banner
-                    title={state.installationMessage}
-                    tone={state.installationStatus === 'error' ? 'critical' : 'success'}
-                  />
+                      <Card>
+                        <Box padding="300">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <Text variant="headingSm" as="h4">
+                                🎯 Loyalty Points Banner
+                              </Text>
+                              <Text variant="bodySm" as="p" tone="subdued">
+                                Prominent banner for hero sections with points balance and CTAs
+                              </Text>
+                            </div>
+                            <Badge tone="success">Available</Badge>
+                          </div>
+                        </Box>
+                      </Card>
+
+                      <Card>
+                        <Box padding="300">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <Text variant="headingSm" as="h4">
+                                🛍️ Product Points Earning
+                              </Text>
+                              <Text variant="bodySm" as="p" tone="subdued">
+                                Shows points customers will earn for each product
+                              </Text>
+                            </div>
+                            <Badge tone="success">Available</Badge>
+                          </div>
+                        </Box>
+                      </Card>
+
+                    </div>
+                  </Box>
                 </Box>
-              )}
+              </Card>
             </Box>
-          </Card>
+
+            <Box paddingBlockStart="400">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    📋 How to Add Blocks to Your Theme
+                  </Text>
+                  <Box paddingBlockStart="400">
+                    <div style={{ display: 'grid', gap: '20px' }}>
+
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{
+                          background: '#4F46E5',
+                          color: 'white',
+                          borderRadius: '50%',
+                          width: '24px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          flexShrink: 0
+                        }}>1</div>
+                        <div>
+                          <Text variant="bodyMd" fontWeight="semibold" as="p">
+                            Open your theme editor
+                          </Text>
+                          <Text variant="bodySm" as="p" tone="subdued">
+                            Go to Online Store → Themes → Customize on your current theme
+                          </Text>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{
+                          background: '#4F46E5',
+                          color: 'white',
+                          borderRadius: '50%',
+                          width: '24px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          flexShrink: 0
+                        }}>2</div>
+                        <div>
+                          <Text variant="bodyMd" fontWeight="semibold" as="p">
+                            Add blocks to your sections
+                          </Text>
+                          <Text variant="bodySm" as="p" tone="subdued">
+                            Click "Add block" in any section and look for "Loyco Loyalty Blocks" in the Apps section
+                          </Text>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{
+                          background: '#4F46E5',
+                          color: 'white',
+                          borderRadius: '50%',
+                          width: '24px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          flexShrink: 0
+                        }}>3</div>
+                        <div>
+                          <Text variant="bodyMd" fontWeight="semibold" as="p">
+                            Customize and save
+                          </Text>
+                          <Text variant="bodySm" as="p" tone="subdued">
+                            Configure colors, text, and positioning. Click "Save" when finished
+                          </Text>
+                        </div>
+                      </div>
+
+                    </div>
+                  </Box>
+
+                  <Box paddingBlockStart="400">
+                    <Banner tone="warning">
+                      <p><strong>Recommended placement:</strong></p>
+                      <ul style={{ marginLeft: '20px', marginTop: '8px' }}>
+                        <li>Add "Loyalty Points Header" to your header section</li>
+                        <li>Add "Loyalty Points Banner" to your homepage hero</li>
+                        <li>Add "Product Points Earning" to product pages</li>
+                      </ul>
+                    </Banner>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            <Box paddingBlockStart="400">
+              <Card>
+                <Box padding="400">
+                  <Text variant="headingMd" as="h3">
+                    🚀 Quick Links
+                  </Text>
+                  <Box paddingBlockStart="300">
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <a
+                        href="/admin/themes/current/editor"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 16px',
+                          background: '#4F46E5',
+                          color: 'white',
+                          textDecoration: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        🎨 Open Theme Editor
+                      </a>
+                      <a
+                        href="/admin/themes"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 16px',
+                          background: '#6B7280',
+                          color: 'white',
+                          textDecoration: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        📂 Manage Themes
+                      </a>
+                    </div>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+          </Box>
         );
 
       case 6:
