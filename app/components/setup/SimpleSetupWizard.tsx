@@ -966,6 +966,7 @@ export function SimpleSetupWizard() {
                       {isLastStep ? (
                         !state.programLaunched ? (
                           <Form method="post">
+                            <input type="hidden" name="intent" value="launch" />
                             <Button variant="primary" submit>
                               Launch Program
                             </Button>

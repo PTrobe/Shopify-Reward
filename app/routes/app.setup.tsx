@@ -27,15 +27,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    const { session } = await authenticate.admin(request);
-    const userSession = await getSession(request.headers.get("Cookie"));
     const formData = await request.formData();
     const intent = formData.get("intent");
 
-    // Handle navigation and state updates
+    // Handle launch intent before authentication (no admin context needed)
     if (intent === "launch") {
       return redirect("/app");
     }
+
+    const { session } = await authenticate.admin(request);
+    const userSession = await getSession(request.headers.get("Cookie"));
 
     if (intent === "reset") {
       userSession.unset("setupState");
