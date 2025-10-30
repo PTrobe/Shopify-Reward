@@ -369,6 +369,202 @@ export function SimpleSetupWizard() {
           </Box>
         );
 
+      case 2:
+        return (
+          <Card>
+            <Box padding="400">
+              <Text variant="headingMd" as="h3">
+                Points Configuration
+              </Text>
+              <Box paddingBlockStart="200">
+                <Text variant="bodyMd" as="p" tone="subdued">
+                  Configure how customers earn points in your loyalty program
+                </Text>
+              </Box>
+
+              <Box paddingBlockStart="400">
+                <FormLayout>
+                  <TextField
+                    label="Points per dollar spent"
+                    type="number"
+                    value={String(state.pointsPerDollar)}
+                    onChange={(value) => updateField('pointsPerDollar', Number(value) || 0)}
+                    helpText="How many points customers earn for each dollar spent"
+                    autoComplete="off"
+                    min={0}
+                  />
+                  <FormLayout.Group condensed>
+                    <TextField
+                      label="Signup bonus"
+                      type="number"
+                      value={String(state.signupBonus)}
+                      onChange={(value) => updateField('signupBonus', Number(value) || 0)}
+                      helpText="Points awarded when customers join"
+                      autoComplete="off"
+                      min={0}
+                    />
+                    <TextField
+                      label="Birthday bonus"
+                      type="number"
+                      value={String(state.birthdayBonus)}
+                      onChange={(value) => updateField('birthdayBonus', Number(value) || 0)}
+                      helpText="Points awarded on customer's birthday"
+                      autoComplete="off"
+                      min={0}
+                    />
+                  </FormLayout.Group>
+                  <FormLayout.Group condensed>
+                    <TextField
+                      label="Referral bonus"
+                      type="number"
+                      value={String(state.referralBonus)}
+                      onChange={(value) => updateField('referralBonus', Number(value) || 0)}
+                      helpText="Points for referring a friend"
+                      autoComplete="off"
+                      min={0}
+                    />
+                    <TextField
+                      label="Review bonus"
+                      type="number"
+                      value={String(state.reviewBonus)}
+                      onChange={(value) => updateField('reviewBonus', Number(value) || 0)}
+                      helpText="Points for writing a product review"
+                      autoComplete="off"
+                      min={0}
+                    />
+                  </FormLayout.Group>
+                  <TextField
+                    label="Minimum points for redemption"
+                    type="number"
+                    value={String(state.minimumRedemption)}
+                    onChange={(value) => updateField('minimumRedemption', Number(value) || 0)}
+                    helpText="Minimum points required before customers can redeem rewards"
+                    autoComplete="off"
+                    min={0}
+                  />
+                </FormLayout>
+              </Box>
+            </Box>
+          </Card>
+        );
+
+      case 3:
+        return (
+          <Card>
+            <Box padding="400">
+              <Text variant="headingMd" as="h3">
+                Reward Tiers
+              </Text>
+              <Box paddingBlockStart="200">
+                <Text variant="bodyMd" as="p" tone="subdued">
+                  Configure the rewards customers can redeem with their points
+                </Text>
+              </Box>
+
+              <Box paddingBlockStart="400">
+                <Banner tone="info">
+                  <p>Default reward tiers have been configured. You can customize these later in the dashboard.</p>
+                </Banner>
+              </Box>
+
+              <Box paddingBlockStart="400">
+                {state.rewardTiers.map((tier, index) => (
+                  <Box key={tier.id} paddingBlockEnd="300">
+                    <Card>
+                      <Box padding="300">
+                        <Text variant="headingSm" as="h4">
+                          {tier.name}
+                        </Text>
+                        <Box paddingBlockStart="200">
+                          <Text variant="bodySm" as="p" tone="subdued">
+                            {tier.pointsRequired} points • {tier.description}
+                          </Text>
+                        </Box>
+                      </Box>
+                    </Card>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          </Card>
+        );
+
+      case 4:
+        return (
+          <Card>
+            <Box padding="400">
+              <Text variant="headingMd" as="h3">
+                Display Settings
+              </Text>
+              <Box paddingBlockStart="200">
+                <Text variant="bodyMd" as="p" tone="subdued">
+                  Customize how the loyalty program appears to your customers
+                </Text>
+              </Box>
+
+              <Box paddingBlockStart="400">
+                <FormLayout>
+                  <FormLayout.Group condensed>
+                    <TextField
+                      label="Primary color"
+                      value={state.primaryColor}
+                      onChange={(value) => updateField('primaryColor', value)}
+                      helpText="Main brand color for loyalty widgets (e.g., #FF5733)"
+                      autoComplete="off"
+                      placeholder="#000000"
+                    />
+                    <TextField
+                      label="Secondary color"
+                      value={state.secondaryColor}
+                      onChange={(value) => updateField('secondaryColor', value)}
+                      helpText="Accent color for buttons and highlights (e.g., #33FF57)"
+                      autoComplete="off"
+                      placeholder="#FFFFFF"
+                    />
+                  </FormLayout.Group>
+                  <Select
+                    label="Points display style"
+                    options={[
+                      { label: 'Badge', value: 'badge' },
+                      { label: 'Widget', value: 'widget' },
+                      { label: 'Minimal', value: 'minimal' },
+                    ]}
+                    value={state.pointsDisplayStyle}
+                    onChange={(value) => updateField('pointsDisplayStyle', value)}
+                    helpText="How points are displayed to customers"
+                  />
+                  <Box paddingBlockStart="300">
+                    <Text variant="headingSm" as="h4">
+                      Visibility Options
+                    </Text>
+                    <Box paddingBlockStart="200">
+                      <Checkbox
+                        label="Show points balance in header"
+                        checked={state.showInHeader}
+                        onChange={(checked) => updateField('showInHeader', checked)}
+                      />
+                      <Box paddingBlockStart="200">
+                        <Checkbox
+                          label="Show points earning on product pages"
+                          checked={state.showOnProductPage}
+                          onChange={(checked) => updateField('showOnProductPage', checked)}
+                        />
+                      </Box>
+                      <Box paddingBlockStart="200">
+                        <Checkbox
+                          label="Show points summary in cart"
+                          checked={state.showInCart}
+                          onChange={(checked) => updateField('showInCart', checked)}
+                        />
+                      </Box>
+                    </Box>
+                  </Box>
+                </FormLayout>
+              </Box>
+            </Box>
+          </Card>
+        );
+
       case 5:
         return (
           <Card>
@@ -414,6 +610,200 @@ export function SimpleSetupWizard() {
                   />
                 </Box>
               )}
+            </Box>
+          </Card>
+        );
+
+      case 6:
+        return (
+          <Card>
+            <Box padding="400">
+              <Text variant="headingMd" as="h3">
+                Email Notifications
+              </Text>
+              <Box paddingBlockStart="200">
+                <Text variant="bodyMd" as="p" tone="subdued">
+                  Configure automated email notifications for your loyalty program
+                </Text>
+              </Box>
+
+              <Box paddingBlockStart="400">
+                <FormLayout>
+                  <Box>
+                    <Text variant="headingSm" as="h4">
+                      Email Types
+                    </Text>
+                    <Box paddingBlockStart="200">
+                      <Checkbox
+                        label="Welcome email when customers join"
+                        checked={state.enableWelcomeEmail}
+                        onChange={(checked) => updateField('enableWelcomeEmail', checked)}
+                      />
+                      <Box paddingBlockStart="200">
+                        <Checkbox
+                          label="Notification when points are earned"
+                          checked={state.enablePointsEarnedEmail}
+                          onChange={(checked) => updateField('enablePointsEarnedEmail', checked)}
+                        />
+                      </Box>
+                      <Box paddingBlockStart="200">
+                        <Checkbox
+                          label="Notification when rewards are available"
+                          checked={state.enableRewardAvailableEmail}
+                          onChange={(checked) => updateField('enableRewardAvailableEmail', checked)}
+                        />
+                      </Box>
+                    </Box>
+                  </Box>
+                  <FormLayout.Group condensed>
+                    <TextField
+                      label="From name"
+                      value={state.emailFromName}
+                      onChange={(value) => updateField('emailFromName', value)}
+                      helpText="Name shown in email sender"
+                      autoComplete="off"
+                    />
+                    <TextField
+                      label="From email address"
+                      type="email"
+                      value={state.emailFromAddress}
+                      onChange={(value) => updateField('emailFromAddress', value)}
+                      helpText="Email address for sending notifications"
+                      autoComplete="off"
+                    />
+                  </FormLayout.Group>
+                </FormLayout>
+              </Box>
+            </Box>
+          </Card>
+        );
+
+      case 7:
+        return (
+          <Card>
+            <Box padding="400">
+              <Text variant="headingMd" as="h3">
+                Review Your Configuration
+              </Text>
+              <Box paddingBlockStart="200">
+                <Text variant="bodyMd" as="p" tone="subdued">
+                  Review your loyalty program settings before launching
+                </Text>
+              </Box>
+
+              <Box paddingBlockStart="400">
+                <Card>
+                  <Box padding="300">
+                    <Text variant="headingSm" as="h4">
+                      Program Information
+                    </Text>
+                    <Box paddingBlockStart="200">
+                      <Text variant="bodySm" as="p">
+                        <strong>Name:</strong> {state.programName || 'Not set'}
+                      </Text>
+                      <Text variant="bodySm" as="p">
+                        <strong>Currency:</strong> {state.currency}
+                      </Text>
+                      <Text variant="bodySm" as="p">
+                        <strong>Type:</strong> {state.programType}
+                      </Text>
+                    </Box>
+                  </Box>
+                </Card>
+
+                <Box paddingBlockStart="300">
+                  <Card>
+                    <Box padding="300">
+                      <Text variant="headingSm" as="h4">
+                        Points Configuration
+                      </Text>
+                      <Box paddingBlockStart="200">
+                        <Text variant="bodySm" as="p">
+                          <strong>Points per dollar:</strong> {state.pointsPerDollar}
+                        </Text>
+                        <Text variant="bodySm" as="p">
+                          <strong>Signup bonus:</strong> {state.signupBonus} points
+                        </Text>
+                        <Text variant="bodySm" as="p">
+                          <strong>Minimum redemption:</strong> {state.minimumRedemption} points
+                        </Text>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Box>
+
+                <Box paddingBlockStart="300">
+                  <Card>
+                    <Box padding="300">
+                      <Text variant="headingSm" as="h4">
+                        Reward Tiers
+                      </Text>
+                      <Box paddingBlockStart="200">
+                        <Text variant="bodySm" as="p">
+                          {state.rewardTiers.length} reward tiers configured
+                        </Text>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Box>
+
+                <Box paddingBlockStart="300">
+                  <Card>
+                    <Box padding="300">
+                      <Text variant="headingSm" as="h4">
+                        Theme Installation
+                      </Text>
+                      <Box paddingBlockStart="200">
+                        <Text variant="bodySm" as="p">
+                          <strong>Status:</strong> {state.installationStatus === 'complete' ? 'Installed' : 'Not installed'}
+                        </Text>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Box>
+              </Box>
+            </Box>
+          </Card>
+        );
+
+      case 8:
+        return (
+          <Card>
+            <Box padding="400">
+              <Text variant="headingMd" as="h3">
+                Ready to Launch!
+              </Text>
+              <Box paddingBlockStart="200">
+                <Text variant="bodyMd" as="p" tone="subdued">
+                  Your loyalty program is configured and ready to go live
+                </Text>
+              </Box>
+
+              <Box paddingBlockStart="400">
+                <Banner tone="success">
+                  <p>
+                    Click "Launch Program" below to activate your loyalty program and start rewarding your customers.
+                  </p>
+                </Banner>
+              </Box>
+
+              <Box paddingBlockStart="400">
+                <Card>
+                  <Box padding="300">
+                    <Text variant="headingSm" as="h4">
+                      What happens next?
+                    </Text>
+                    <Box paddingBlockStart="200">
+                      <ul>
+                        <li>Your loyalty program will be activated</li>
+                        <li>Customers can start earning and redeeming points</li>
+                        <li>Email notifications will be sent based on your settings</li>
+                        <li>You can manage everything from the dashboard</li>
+                      </ul>
+                    </Box>
+                  </Box>
+                </Card>
+              </Box>
             </Box>
           </Card>
         );
