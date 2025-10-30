@@ -47,7 +47,7 @@
         font-weight: 600;
       ">
         {% if block.settings.custom_heading != blank %}
-          {{ block.settings.custom_heading | replace: '{points}', customer_points }}
+          {{ block.settings.custom_heading | replace: 'POINTS_PLACEHOLDER', customer_points }}
         {% else %}
           You have {{ customer_points }} {{ block.settings.points_currency }}!
         {% endif %}
@@ -90,7 +90,7 @@
     {% endif %}
 
     {% if block.settings.show_cta_button %}
-    <a href="{{ block.settings.cta_link | default: '/account' }}"
+    <a href="/account"
        class="loyco-banner-cta"
        style="
          display: inline-block;
@@ -219,8 +219,8 @@
       "type": "text",
       "id": "custom_heading",
       "label": "Custom Heading (for logged in users)",
-      "placeholder": "You have {points} points!",
-      "info": "Use {points} to show the points balance"
+      "placeholder": "You have POINTS_PLACEHOLDER points!",
+      "info": "Use POINTS_PLACEHOLDER to show the points balance"
     },
     {
       "type": "range",
@@ -289,12 +289,6 @@
       "id": "guest_cta_text",
       "label": "Button Text (guest users)",
       "default": "Sign Up Now"
-    },
-    {
-      "type": "url",
-      "id": "cta_link",
-      "label": "Button Link",
-      "default": "/account"
     },
     {
       "type": "color",

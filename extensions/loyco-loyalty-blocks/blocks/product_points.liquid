@@ -45,7 +45,7 @@
         font-weight: {{ block.settings.font_weight }};
         line-height: 1.4;
       ">
-        {{ block.settings.custom_message | replace: '{points}', points_earned | replace: '{currency}', block.settings.points_currency }}
+        {{ block.settings.custom_message | replace: 'POINTS_PLACEHOLDER', points_earned | replace: 'CURRENCY_PLACEHOLDER', block.settings.points_currency }}
       </span>
     {% else %}
       <span style="
@@ -145,8 +145,8 @@
       "type": "textarea",
       "id": "custom_message",
       "label": "Custom Message",
-      "placeholder": "Earn {points} {currency} with this purchase",
-      "info": "Use {points} for points amount and {currency} for currency name"
+      "placeholder": "Earn POINTS_PLACEHOLDER CURRENCY_PLACEHOLDER with this purchase",
+      "info": "Use POINTS_PLACEHOLDER for points amount and CURRENCY_PLACEHOLDER for currency name"
     },
     {
       "type": "header",
