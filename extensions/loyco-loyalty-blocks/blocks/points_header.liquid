@@ -4,38 +4,55 @@
 {% endcomment %}
 
 {% assign customer_points = 0 %}
-{% assign customer_id = customer.id %}
+{% assign show_block = true %}
 
 {% comment %}
   Note: Theme blocks cannot make HTTP requests directly.
   Points data will need to be injected via JavaScript or app proxy.
   For now, using placeholder data for development.
 {% endcomment %}
-{% if customer_id %}
-  {% comment %} Placeholder points - will be replaced by JS injection {% endcomment %}
-  {% assign customer_points = 100 %}
+
+{% comment %} Determine visibility based on settings {% endcomment %}
+{% if block.settings.show_only_when_points %}
+  {% if customer %}
+    {% assign customer_points = 100 %}
+    {% assign show_block = true %}
+  {% else %}
+    {% assign show_block = false %}
+  {% endif %}
+{% else %}
+  {% if customer %}
+    {% comment %} Placeholder points for logged-in customers - will be replaced by JS injection {% endcomment %}
+    {% assign customer_points = 100 %}
+  {% else %}
+    {% if block.settings.show_when_logged_out %}
+      {% assign customer_points = 0 %}
+      {% assign show_block = true %}
+    {% else %}
+      {% assign show_block = false %}
+    {% endif %}
+  {% endif %}
 {% endif %}
 
-{% comment %} Only show if customer has points or is logged in {% endcomment %}
-{% if customer and customer_points >= 0 %}
+{% if show_block %}
 <div class="loyco-header-points" style="
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  background: rgba(255, 215, 0, 0.1);
+  background: {{ block.settings.background_color | default: '#FFF3CC' }};
   border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
-  color: #B8860B;
   white-space: nowrap;
-  max-width: 60px;
+  max-width: 120px;
   overflow: hidden;
+  z-index: 10;
 ">
   {% comment %} Star icon using Unicode {% endcomment %}
   <span class="loyco-star-icon" style="
     font-size: 14px;
-    color: #FFD700;
+    color: {{ block.settings.star_color | default: '#FFD700' }};
     line-height: 1;
     display: flex;
     align-items: center;
@@ -45,7 +62,7 @@
   <span class="loyco-points-count" style="
     font-size: 11px;
     font-weight: 700;
-    color: #B8860B;
+    color: {{ block.settings.text_color | default: '#B8860B' }};
     min-width: 0;
   ">{{ customer_points }}</span>
 </div>
@@ -111,12 +128,20 @@
       "type": "color",
       "id": "background_color",
       "label": "Background Color",
-      "default": "rgba(255, 215, 0, 0.1)"
+      "default": "#FFF3CC"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_when_logged_out",
+      "label": "Show for logged-out customers",
+      "info": "Display the block with 0 points for customers who are not logged in",
+      "default": true
     },
     {
       "type": "checkbox",
       "id": "show_only_when_points",
       "label": "Only show when customer has points",
+      "info": "Hide the block if customer has 0 points (overrides 'Show for logged-out customers')",
       "default": false
     }
   ]
