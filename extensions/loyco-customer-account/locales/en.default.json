@@ -1,3 +1,35 @@
 {
-  "earnPoints": "You've earned 1,000 points from this order. You've been upgraded to Platinum tier."
+  "earnPoints": "You've earned 1,000 points from this order. You've been upgraded to Platinum tier.",
+  "loyalty": {
+    "title": "Loyalty & Rewards",
+    "loading": "Loading...",
+    "loadingMessage": "Loading your loyalty information...",
+    "error": "Error",
+    "retry": "Retry",
+    "member": "Member",
+    "points": "points",
+    "tierProgress": "Earn {points} more points to reach {tier}",
+    "toNextTier": "to next tier",
+    "memberInfo": "Member Information",
+    "edit": "Edit",
+    "editProfile": "Edit your profile information",
+    "cancel": "Cancel",
+    "save": "Save",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "birthDate": "Birth Date",
+    "addBirthDate": "Add your birth date to receive a special birthday bonus!",
+    "benefits": "Available Benefits",
+    "eligible": "Eligible",
+    "pointsRequired": "points required",
+    "redeem": "Redeem",
+    "redeeming": "Redeeming...",
+    "discountCode": "Discount Code",
+    "needMorePoints": "Earn {points} more points to unlock",
+    "recentActivity": "Recent Activity",
+    "overviewMessage": "View your rewards and redeem benefits",
+    "viewRewards": "View Loyalty & Rewards",
+    "redeemComingSoon": "Redemption feature coming soon!"
+  }
 }
