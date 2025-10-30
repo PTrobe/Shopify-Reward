@@ -19,12 +19,20 @@ uid = "bbcd887a-7923-bd2f-eb86-0b947edb161b0a1925b8"
 module = "./src/OrderStatusBlock.jsx"
 target = "customer-account.order-status.block.render"
 
+[[extensions.targeting]]
+module = "./src/LoyaltyOverviewBlock.jsx"
+target = "customer-account.order-status.block.render"
+
+[[extensions.targeting]]
+module = "./src/LoyaltyPage.jsx"
+target = "customer-account.page.render"
+
 [extensions.capabilities]
-# Gives your extension access to directly query Shopify’s storefront API.
+# Gives your extension access to directly query Shopify's storefront API.
 # https://shopify.dev/docs/api/customer-account-ui-extensions/unstable/configuration#api-access
 api_access = true
 
 # Gives your extension access to make external network calls, using the
 # JavaScript `fetch()` API. Learn more:
 # https://shopify.dev/docs/api/customer-account-ui-extensions/unstable/configuration#network-access
-# network_access = true
+network_access = true
