@@ -32,15 +32,14 @@ interface RewardTier {
   description: string;
 }
 
-interface ThemeSummary {
-  id: string;
-  name: string;
-  role: string;
+interface SetupState {
+  currentStep: number;
+  completed?: boolean;
 }
 
 interface SetupLoaderData {
   shop: string;
-  themes: ThemeSummary[];
+  setupState: SetupState;
 }
 
 interface WizardState {
@@ -61,11 +60,6 @@ interface WizardState {
   showInHeader: boolean;
   showOnProductPage: boolean;
   showInCart: boolean;
-  selectedTheme: string;
-  autoInstallBlocks: boolean;
-  backupBeforeInstall: boolean;
-  installationStatus: 'pending' | 'installing' | 'complete' | 'error';
-  installationMessage: string;
   enableWelcomeEmail: boolean;
   enablePointsEarnedEmail: boolean;
   enableRewardAvailableEmail: boolean;
@@ -75,7 +69,7 @@ interface WizardState {
 }
 
 const TOTAL_STEPS = 8;
-const LOCAL_STORAGE_VERSION = 'v2';
+const LOCAL_STORAGE_VERSION = 'v3';
 
 const BASE_REWARD_TIERS: RewardTier[] = [
   {
@@ -123,11 +117,6 @@ function buildInitialState(): WizardState {
     showInHeader: true,
     showOnProductPage: true,
     showInCart: false,
-    selectedTheme: '',
-    autoInstallBlocks: true,
-    backupBeforeInstall: true,
-    installationStatus: 'pending',
-    installationMessage: '',
     enableWelcomeEmail: true,
     enablePointsEarnedEmail: true,
     enableRewardAvailableEmail: true,
@@ -139,7 +128,6 @@ function buildInitialState(): WizardState {
 
 export function SimpleSetupWizard() {
   const loaderData = useLoaderData<SetupLoaderData>();
-  const installFetcher = useFetcher();
   const persistenceKey = useMemo(
     () => `loyco-setup-${LOCAL_STORAGE_VERSION}-${loaderData.shop}`,
     [loaderData.shop],
@@ -147,8 +135,6 @@ export function SimpleSetupWizard() {
 
   const [state, setState] = useState<WizardState>(() => buildInitialState());
   const [errors, setErrors] = useState<string[]>([]);
-
-  const availableThemes = loaderData.themes;
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -162,11 +148,6 @@ export function SimpleSetupWizard() {
           ...buildInitialState(),
           ...parsed,
         };
-
-        if (adjusted.installationStatus === 'installing') {
-          adjusted.installationStatus = 'pending';
-          adjusted.installationMessage = '';
-        }
 
         setState(adjusted);
       }
@@ -215,10 +196,6 @@ export function SimpleSetupWizard() {
       }
     }
 
-    if (current.step === 5 && !current.selectedTheme) {
-      validationErrors.push('Choose a theme to install into');
-    }
-
     return validationErrors;
   };
 
@@ -238,74 +215,9 @@ export function SimpleSetupWizard() {
     setStep(Math.max(state.step - 1, 1));
   };
 
-  const installThemeBlocks = () => {
-    const selectedTheme =
-      state.selectedTheme ||
-      availableThemes.find((theme) => theme.role === 'main')?.id ||
-      availableThemes[0]?.id || '';
-
-    if (!selectedTheme) {
-      setErrors(['No available theme to install into.']);
-      return;
-    }
-
-    setState((prev) => ({
-      ...prev,
-      selectedTheme,
-      installationStatus: 'installing',
-      installationMessage: '',
-    }));
-
-    const selectedThemeName = availableThemes.find((theme) => theme.id === selectedTheme)?.name || 'Selected theme';
-
-    installFetcher.submit(
-      {
-        action: 'install_all',
-        themeId: selectedTheme,
-        themeName: selectedThemeName,
-      },
-      { method: 'post' },
-    );
-  };
-
-  useEffect(() => {
-    if (installFetcher.state === 'idle' && installFetcher.data) {
-      if (installFetcher.data.success) {
-        setState((prev) => ({
-          ...prev,
-          installationStatus: 'complete',
-          installationMessage: installFetcher.data.message || 'Loyalty blocks installed successfully.',
-        }));
-
-        setTimeout(() => {
-          setStep(Math.min(state.step + 1, TOTAL_STEPS));
-        }, 1200);
-      } else {
-        setState((prev) => ({
-          ...prev,
-          installationStatus: 'error',
-          installationMessage: installFetcher.data.message || installFetcher.data.error || 'Theme installation failed. Please try again.',
-        }));
-      }
-    }
-  }, [installFetcher.state, installFetcher.data]);
-
   const launchProgram = () => {
     setState((prev) => ({ ...prev, programLaunched: true }));
   };
-
-  // Keep theme selection in sync with loader data
-  useEffect(() => {
-    if (!state.selectedTheme && availableThemes.length > 0) {
-      const mainTheme = availableThemes.find((theme) => theme.role === 'main');
-      const selectedThemeId = mainTheme?.id || availableThemes[0]?.id || '';
-
-      setState((prev) => ({
-        ...prev,
-        selectedTheme: selectedThemeId,
-      }));
-    }
-  }, [availableThemes, state.selectedTheme]);
 
   const progress = (state.step / TOTAL_STEPS) * 100;
   const isFirstStep = state.step === 1;
@@ -924,11 +836,14 @@ export function SimpleSetupWizard() {
                   <Card>
                     <Box padding="300">
                       <Text variant="headingSm" as="h4">
-                        Theme Installation
+                        Display Settings
                       </Text>
                       <Box paddingBlockStart="200">
                         <Text variant="bodySm" as="p">
-                          <strong>Status:</strong> {state.installationStatus === 'complete' ? 'Installed' : 'Not installed'}
+                          <strong>Primary Color:</strong> {state.primaryColor}
+                        </Text>
+                        <Text variant="bodySm" as="p">
+                          <strong>Display Style:</strong> {state.pointsDisplayStyle}
                         </Text>
                       </Box>
                     </Box>
@@ -1005,12 +920,12 @@ export function SimpleSetupWizard() {
                   <Text variant="headingMd" as="h2">
                     Program Setup
                   </Text>
-                  <Badge tone="info">{Math.round(progress)}% Complete</Badge>
+                  <Badge tone="info">{`${Math.round(progress)}% Complete`}</Badge>
                 </div>
                 <ProgressBar progress={progress} size="large" />
                 <Box paddingBlockStart="200">
                   <Text variant="bodySm" tone="subdued" as="p">
-                    Step {state.step} of {TOTAL_STEPS}
+                    Step {String(state.step)} of {String(TOTAL_STEPS)}
                   </Text>
                 </Box>
               </Box>
