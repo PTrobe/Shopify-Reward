@@ -65,7 +65,7 @@ function LoyaltyPage() {
       try {
         setLoading(true);
         
-        const response = await fetch('/apps/loyco/loyalty-summary', {
+        const response = await fetch('/apps/loyco-rewards/api/loyalty-summary', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -322,7 +322,7 @@ function LoyaltyPage() {
       setRedeeming(benefitId);
       setRedemptionSuccess(null);
       
-      const response = await fetch('/apps/loyco/redeem-benefit', {
+      const response = await fetch('/apps/loyco-rewards/api/redeem-benefit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -361,7 +361,7 @@ function LoyaltyPage() {
   
   async function handleSaveProfile() {
     try {
-      const response = await fetch('/apps/loyco/update-profile', {
+      const response = await fetch('/apps/loyco-rewards/api/update-profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

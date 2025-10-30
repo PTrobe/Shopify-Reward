@@ -15,7 +15,7 @@ function LoyaltyOverviewBlock() {
       try {
         setLoading(true);
         
-        const response = await fetch('/apps/loyco/loyalty-summary', {
+        const response = await fetch('/apps/loyco-rewards/api/loyalty-summary', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

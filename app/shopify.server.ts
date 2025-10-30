@@ -54,7 +54,8 @@ const shopify = shopifyApp({
     "read_orders",
     "write_orders",
     "read_themes",
-    "write_themes"
+    "write_themes",
+    "write_discounts"
   ],
   appUrl: normalizedAppUrl,
   authPathPrefix: "/auth",
