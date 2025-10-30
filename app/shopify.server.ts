@@ -52,7 +52,9 @@ const shopify = shopifyApp({
     "read_customers",
     "write_customers",
     "read_orders",
-    "write_orders"
+    "write_orders",
+    "read_themes",
+    "write_themes"
   ],
   appUrl: normalizedAppUrl,
   authPathPrefix: "/auth",

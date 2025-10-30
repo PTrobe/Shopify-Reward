@@ -36,28 +36,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
-  const formData = await request.formData();
-  const intent = formData.get("intent");
-
-  if (intent === "launch") {
-    return redirect("/app");
-  }
-
-  const actionType = formData.get("action");
-  const themeId = formData.get("themeId");
-
-  if (!themeId || typeof themeId !== "string") {
-    return json({ success: false, message: "Theme ID is required." }, { status: 400 });
-  }
-
-  if (!actionType || typeof actionType !== "string") {
-    return json({ success: false, message: "Theme action is required." }, { status: 400 });
-  }
-
-  const installer = new ThemeInstaller({ admin, session, themeId });
-
   try {
+    const { admin, session } = await authenticate.admin(request);
+    const formData = await request.formData();
+    const intent = formData.get("intent");
+
+    if (intent === "launch") {
+      return redirect("/app");
+    }
+
+    const actionType = formData.get("action");
+    const themeId = formData.get("themeId");
+
+    if (!themeId || typeof themeId !== "string") {
+      return json({ success: false, message: "Theme ID is required." }, { status: 400 });
+    }
+
+    if (!actionType || typeof actionType !== "string") {
+      return json({ success: false, message: "Theme action is required." }, { status: 400 });
+    }
+
+    const installer = new ThemeInstaller({ admin, session, themeId });
+
     let result: ThemeInstallResult;
 
     switch (actionType) {
@@ -79,17 +79,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     return json(result, { status: result.success ? 200 : 422 });
   } catch (error) {
-    console.error("Setup theme installation error:", {
-      shop: session.shop,
-      themeId,
-      actionType,
-      error,
-    });
+    console.error("Setup theme installation error:", error);
 
     return json({
       success: false,
       message: formatThemeError(error),
-    });
+    }, { status: 500 });
   }
 };
 

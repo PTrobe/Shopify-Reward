@@ -6,13 +6,13 @@ type AdminApi = {
     resources: {
       Asset: {
         all: (params: Record<string, any>) => Promise<{ data?: Array<{ value?: string }> }>;
-        save: (params: Record<string, any>) => Promise<void>;
         delete: (params: Record<string, any>) => Promise<void>;
       };
       Theme: {
         find: (params: Record<string, any>) => Promise<{ data?: any }>;
       };
     };
+    put: (params: { session: any; path: string; data: any }) => Promise<{ status: number; statusText?: string }>;
   };
 };
 
@@ -109,26 +109,26 @@ async function upsertAsset(
   value: string,
 ) {
   console.log('[Loyco] About to save asset:', { themeId, key, hasAdmin: !!admin });
-  console.log('[Loyco] Admin structure:', {
-    hasRest: !!admin?.rest,
-    hasResources: !!admin?.rest?.resources,
-    hasAsset: !!admin?.rest?.resources?.Asset,
-    assetType: typeof admin?.rest?.resources?.Asset,
-    assetKeys: admin?.rest?.resources?.Asset ? Object.getOwnPropertyNames(admin.rest.resources.Asset) : 'N/A'
-  });
 
-  // Use the exact same pattern as the working api.theme.install.tsx
   const numericThemeId = Number(themeId);
   if (Number.isNaN(numericThemeId)) {
     throw new Error(`Invalid theme id "${themeId}"`);
   }
 
-  await admin.rest.resources.Asset.save({
+  const response = await admin.rest.put({
     session,
-    theme_id: numericThemeId,
-    key,
-    value,
+    path: `themes/${numericThemeId}/assets`,
+    data: {
+      asset: {
+        key,
+        value,
+      },
+    },
   });
+
+  if (!response || response.status !== 200) {
+    throw new Error(`Failed to save asset ${key}: ${response?.statusText || 'Unknown error'}`);
+  }
 }
 
 async function backupAsset(
@@ -150,12 +150,7 @@ async function backupAsset(
     return;
   }
 
-  await admin.rest.resources.Asset.save({
-    session,
-    theme_id: numericThemeId,
-    key: backupKey,
-    value: existingValue,
-  });
+  await upsertAsset(admin, session, themeId, backupKey, existingValue);
 }
 
 function injectHeaderSnippet(layout: string) {
