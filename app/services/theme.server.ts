@@ -1,20 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-type AdminApi = {
-  rest: {
-    resources: {
-      Asset: {
-        all: (params: Record<string, any>) => Promise<{ data?: Array<{ value?: string }> }>;
-        delete: (params: Record<string, any>) => Promise<void>;
-      };
-      Theme: {
-        find: (params: Record<string, any>) => Promise<{ data?: any }>;
-      };
-    };
-    put: (params: { session: any; path: string; data: any }) => Promise<{ status: number; statusText?: string }>;
-  };
-};
+type AdminApi = any;
 
 export type ThemeInstallResult = {
   success: boolean;
