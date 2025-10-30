@@ -27,10 +27,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     return json({
       shop: session.shop,
-      themes: [
-        { id: "dawn", name: "Dawn", role: "main" },
-        { id: "refresh", name: "Refresh", role: "unpublished" },
-      ],
+      themes: [],
+      error: "Unable to fetch themes. Please ensure the app has read_themes and write_themes permissions and reinstall if needed.",
     });
   }
 };
@@ -49,11 +47,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const themeId = formData.get("themeId");
 
     if (!themeId || typeof themeId !== "string") {
-      return json({ success: false, message: "Theme ID is required." }, { status: 400 });
+      return json({ success: false, message: "Theme ID is required." }, { status: 200 });
     }
 
     if (!actionType || typeof actionType !== "string") {
-      return json({ success: false, message: "Theme action is required." }, { status: 400 });
+      return json({ success: false, message: "Theme action is required." }, { status: 200 });
+    }
+
+    const numericThemeId = Number(themeId);
+    if (Number.isNaN(numericThemeId)) {
+      return json({ 
+        success: false, 
+        message: "Invalid theme ID. Please ensure the app has read_themes and write_themes permissions. You may need to reinstall the app to grant these permissions." 
+      }, { status: 200 });
     }
 
     const installer = new ThemeInstaller({ admin, session, themeId });
@@ -84,7 +90,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return json({
       success: false,
       message: formatThemeError(error),
-    }, { status: 500 });
+    }, { status: 200 });
   }
 };
 

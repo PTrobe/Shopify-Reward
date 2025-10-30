@@ -41,6 +41,7 @@ interface ThemeSummary {
 interface SetupLoaderData {
   shop: string;
   themes: ThemeSummary[];
+  error?: string;
 }
 
 interface WizardState {
@@ -573,6 +574,14 @@ export function SimpleSetupWizard() {
                 Install Loyalty Program Blocks
               </Text>
 
+              {loaderData.error && (
+                <Box paddingBlockStart="300">
+                  <Banner tone="critical">
+                    <p>{loaderData.error}</p>
+                  </Banner>
+                </Box>
+              )}
+
               <Box paddingBlockStart="300">
                 <FormLayout>
                   <Select
@@ -583,6 +592,7 @@ export function SimpleSetupWizard() {
                     }))}
                     value={state.selectedTheme}
                     onChange={(value) => updateField('selectedTheme', value)}
+                    disabled={availableThemes.length === 0}
                   />
                   <Checkbox
                     label="Create backup before installation"
@@ -597,6 +607,7 @@ export function SimpleSetupWizard() {
                   variant="primary"
                   onClick={installThemeBlocks}
                   loading={state.installationStatus === 'installing'}
+                  disabled={availableThemes.length === 0}
                 >
                   Install loyalty blocks
                 </Button>

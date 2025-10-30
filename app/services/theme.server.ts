@@ -104,7 +104,7 @@ async function upsertAsset(
 
   const response = await admin.rest.put({
     session,
-    path: `themes/${numericThemeId}/assets`,
+    path: `themes/${numericThemeId}/assets.json`,
     data: {
       asset: {
         key,
