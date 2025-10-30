@@ -920,12 +920,12 @@ export function SimpleSetupWizard() {
                   <Text variant="headingMd" as="h2">
                     Program Setup
                   </Text>
-                  <Badge tone="info">{Math.round(progress)}% Complete</Badge>
+                  <Badge tone="info">{`${Math.round(progress)}% Complete`}</Badge>
                 </div>
                 <ProgressBar progress={progress} size="large" />
                 <Box paddingBlockStart="200">
                   <Text variant="bodySm" tone="subdued" as="p">
-                    Step {state.step} of {TOTAL_STEPS}
+                    Step {String(state.step)} of {String(TOTAL_STEPS)}
                   </Text>
                 </Box>
               </Box>
