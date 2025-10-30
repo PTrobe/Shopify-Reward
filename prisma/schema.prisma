@@ -247,6 +247,10 @@ model Redemption {
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   reward   Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
 
+  @@index([customerId, rewardId])
+  @@index([customerId, createdAt])
+  @@index([rewardId, createdAt])
+  @@index([status, expiresAt])
   @@map("redemptions")
 }
 
