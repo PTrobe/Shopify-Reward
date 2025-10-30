@@ -13,7 +13,8 @@
     "test": "jest",
     "verify": "node scripts/verify-deployment.js",
     "db:migrate": "npx prisma migrate deploy",
-    "db:seed": "npx prisma db seed"
+    "db:seed": "npx prisma db seed",
+    "clean-shop": "tsx scripts/clean-shop-data.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.0",
