@@ -24,6 +24,10 @@ module = "./src/LoyaltyOverviewBlock.jsx"
 target = "customer-account.order-status.block.render"
 
 [[extensions.targeting]]
+module = "./src/LoyaltyOverviewBlock.jsx"
+target = "customer-account.profile.block.render"
+
+[[extensions.targeting]]
 module = "./src/LoyaltyPage.jsx"
 target = "customer-account.page.render"
 

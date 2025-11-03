@@ -13,6 +13,7 @@ export default reactExtension('customer-account.block.render', () => <LoyaltyOve
 function LoyaltyOverviewBlock() {
   const [loading, setLoading] = useState(true);
   const [loyaltyData, setLoyaltyData] = useState(null);
+  const [showTestBanner] = useState(true);
 
   useEffect(() => {
     async function fetchLoyaltySummary() {
@@ -55,19 +56,36 @@ function LoyaltyOverviewBlock() {
 
   if (loading) {
     return (
-      <Banner>
-        <Text>Loading loyalty information...</Text>
-      </Banner>
+      <BlockStack spacing="tight">
+        {showTestBanner && (
+          <Banner status="info">
+            <Text>✅ Loyco overview block loaded</Text>
+          </Banner>
+        )}
+        <Banner>
+          <Text>Loading loyalty information...</Text>
+        </Banner>
+      </BlockStack>
     );
   }
 
   if (!loyaltyData) {
-    return null;
+    return showTestBanner ? (
+      <Banner status="info">
+        <Text>✅ Loyco overview block loaded (no data)</Text>
+      </Banner>
+    ) : null;
   }
 
   return (
-    <Banner status="info">
-      <BlockStack spacing="tight">
+    <BlockStack spacing="tight">
+      {showTestBanner && (
+        <Banner status="info">
+          <Text>✅ Loyco overview block loaded</Text>
+        </Banner>
+      )}
+      <Banner status="info">
+        <BlockStack spacing="tight">
         <InlineStack spacing="tight" blockAlignment="center">
           <Text emphasis="bold">
             {loyaltyData.tier.icon} {loyaltyData.tier.name} Member
@@ -85,5 +103,6 @@ function LoyaltyOverviewBlock() {
         </Link>
       </BlockStack>
     </Banner>
+    </BlockStack>
   );
 }

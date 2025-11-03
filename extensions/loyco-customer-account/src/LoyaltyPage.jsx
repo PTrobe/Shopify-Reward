@@ -26,6 +26,8 @@ function LoyaltyPage() {
 
   const api = useApi();
 
+  const [showTestBanner] = useState(true);
+
   useEffect(() => {
     async function fetchCustomerData() {
       try {
@@ -191,6 +193,11 @@ function LoyaltyPage() {
   if (loading) {
     return (
       <BlockStack spacing="base">
+        {showTestBanner && (
+          <Banner status="info">
+            <Text>✅ Loyco extension loaded successfully</Text>
+          </Banner>
+        )}
         <Heading level={1}>Loyalty Program</Heading>
         <Text>Loading your loyalty status...</Text>
       </BlockStack>
@@ -200,6 +207,11 @@ function LoyaltyPage() {
   if (error) {
     return (
       <BlockStack spacing="base">
+        {showTestBanner && (
+          <Banner status="info">
+            <Text>✅ Loyco extension loaded successfully</Text>
+          </Banner>
+        )}
         <Banner status="critical">
           <BlockStack spacing="tight">
             <Heading level={2}>Error</Heading>
@@ -212,9 +224,14 @@ function LoyaltyPage() {
 
   return (
     <BlockStack spacing="large">
+      {showTestBanner && (
+        <Banner status="info">
+          <Text>✅ Loyco extension loaded successfully</Text>
+        </Banner>
+      )}
       <Heading level={1}>Loyalty Program</Heading>
       
-      <BlockStack spacing="base" border="base" padding="base">
+      <BlockStack spacing="base">
         <InlineStack spacing="base" blockAlignment="center">
           <Text size="large" emphasis="bold">
             {loyaltyData.tier.icon} {loyaltyData.tier.name} Member
@@ -244,7 +261,7 @@ function LoyaltyPage() {
         </InlineStack>
         
         {editingProfile ? (
-          <BlockStack spacing="base" border="base" padding="base">
+          <BlockStack spacing="base">
             <Text>Edit your profile information</Text>
             
             <TextField
@@ -272,7 +289,7 @@ function LoyaltyPage() {
             </InlineStack>
           </BlockStack>
         ) : (
-          <BlockStack spacing="tight" border="base" padding="base">
+          <BlockStack spacing="tight">
             <Text>
               <Text emphasis="bold">Name:</Text> {customerData?.firstName} {customerData?.lastName}
             </Text>
@@ -317,7 +334,7 @@ function LoyaltyPage() {
         
         <BlockStack spacing="base">
           {loyaltyData.benefits.map((benefit) => (
-            <BlockStack key={benefit.id} spacing="tight" border="base" padding="base">
+            <BlockStack key={benefit.id} spacing="tight">
               <InlineStack spacing="base" blockAlignment="center">
                 <Heading level={3}>{benefit.title}</Heading>
                 {benefit.eligible ? (
@@ -354,7 +371,7 @@ function LoyaltyPage() {
       <BlockStack spacing="base">
         <Heading level={2}>Recent Activity</Heading>
         
-        <BlockStack spacing="tight" border="base" padding="base">
+        <BlockStack spacing="tight">
           {loyaltyData.recentActivity.map((activity, index) => (
             <InlineStack key={index} spacing="base" blockAlignment="center">
               <Text emphasis="bold">
