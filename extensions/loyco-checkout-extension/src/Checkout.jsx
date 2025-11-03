@@ -17,6 +17,7 @@ function LoyaltyCheckoutExtension() {
   const [loyaltyData, setLoyaltyData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showTestBanner] = useState(true);
 
   const customer = useCustomer();
   const totalAmount = useTotalAmount();
@@ -37,6 +38,11 @@ function LoyaltyCheckoutExtension() {
   const loadLoyaltyData = async () => {
     try {
       setLoading(true);
+
+      if (!shopDomain || !customerId) {
+        setLoading(false);
+        return;
+      }
 
       // Call our app proxy API to get customer loyalty status
       const url = `https://${shopDomain}/apps/loyco-rewards/api/loyalty-summary?logged_in_customer_id=${customerId}`;
@@ -73,54 +79,88 @@ function LoyaltyCheckoutExtension() {
 
   if (!customerId) {
     return (
-      <Banner title="🎁 Join Our Loyalty Program">
-        <BlockStack spacing="tight">
-          <Text>
-            Sign in to earn points on every purchase and unlock exclusive rewards!
-          </Text>
-        </BlockStack>
-      </Banner>
+      <BlockStack spacing="tight">
+        {showTestBanner && (
+          <Banner status="info">
+            <Text>✅ Loyco checkout extension loaded</Text>
+          </Banner>
+        )}
+        <Banner title="🎁 Join Our Loyalty Program">
+          <BlockStack spacing="tight">
+            <Text>
+              Sign in to earn points on every purchase and unlock exclusive rewards!
+            </Text>
+          </BlockStack>
+        </Banner>
+      </BlockStack>
     );
   }
 
   if (loading) {
     return (
-      <Banner title="🎁 Loyalty Rewards">
-        <Text>Loading your loyalty status...</Text>
-      </Banner>
+      <BlockStack spacing="tight">
+        {showTestBanner && (
+          <Banner status="info">
+            <Text>✅ Loyco checkout extension loaded</Text>
+          </Banner>
+        )}
+        <Banner title="🎁 Loyalty Rewards">
+          <Text>Loading your loyalty status...</Text>
+        </Banner>
+      </BlockStack>
     );
   }
 
   if (error) {
     return (
-      <Banner status="warning">
-        <Text>{error}</Text>
-      </Banner>
+      <BlockStack spacing="tight">
+        {showTestBanner && (
+          <Banner status="info">
+            <Text>✅ Loyco checkout extension loaded</Text>
+          </Banner>
+        )}
+        <Banner status="warning">
+          <Text>{error}</Text>
+        </Banner>
+      </BlockStack>
     );
   }
 
   // Show enrollment prompt for non-enrolled customers
   if (!loyaltyData?.enrolled) {
     return (
-      <Banner title="🎁 Join Our Loyalty Program" status="info">
-        <BlockStack spacing="tight">
-          <Text>
-            Start earning points on every purchase and unlock exclusive rewards!
-          </Text>
-          {orderTotal && (
-            <Text appearance="subdued">
-              Earn {Math.floor(parseFloat(orderTotal))} points on this order when you join!
+      <BlockStack spacing="tight">
+        {showTestBanner && (
+          <Banner status="info">
+            <Text>✅ Loyco checkout extension loaded</Text>
+          </Banner>
+        )}
+        <Banner title="🎁 Join Our Loyalty Program" status="info">
+          <BlockStack spacing="tight">
+            <Text>
+              Start earning points on every purchase and unlock exclusive rewards!
             </Text>
-          )}
-        </BlockStack>
-      </Banner>
+            {orderTotal && (
+              <Text appearance="subdued">
+                Earn {Math.floor(parseFloat(orderTotal))} points on this order when you join!
+              </Text>
+            )}
+          </BlockStack>
+        </Banner>
+      </BlockStack>
     );
   }
 
   // Show loyalty benefits for enrolled customers
   return (
-    <Banner title="🎁 Loyalty Rewards" status="success">
-      <BlockStack spacing="base">
+    <BlockStack spacing="tight">
+      {showTestBanner && (
+        <Banner status="info">
+          <Text>✅ Loyco checkout extension loaded</Text>
+        </Banner>
+      )}
+      <Banner title="🎁 Loyalty Rewards" status="success">
+        <BlockStack spacing="base">
         {/* Points to earn */}
         {loyaltyData.pointsToEarn > 0 && (
           <BlockStack spacing="tight">
@@ -161,5 +201,6 @@ function LoyaltyCheckoutExtension() {
         )}
       </BlockStack>
     </Banner>
+    </BlockStack>
   );
 }
