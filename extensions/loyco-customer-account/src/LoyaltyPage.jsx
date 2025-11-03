@@ -1,10 +1,18 @@
-import '@shopify/ui-extensions/preact';
-import { render } from "preact";
-import { useState, useEffect } from "preact/hooks";
+import {
+  reactExtension,
+  Banner,
+  Text,
+  BlockStack,
+  InlineStack,
+  Button,
+  TextField,
+  Divider,
+  Heading,
+  useApi,
+} from '@shopify/ui-extensions-react/customer-account';
+import { useState, useEffect } from 'react';
 
-export default async () => {
-  render(<LoyaltyPage />, document.body);
-};
+export default reactExtension('customer-account.page.render', () => <LoyaltyPage />);
 
 function LoyaltyPage() {
   const [loading, setLoading] = useState(true);
@@ -15,6 +23,8 @@ function LoyaltyPage() {
   const [editFormData, setEditFormData] = useState({});
   const [redeeming, setRedeeming] = useState(null);
   const [redemptionSuccess, setRedemptionSuccess] = useState(null);
+
+  const api = useApi();
 
   useEffect(() => {
     async function fetchCustomerData() {
@@ -34,7 +44,7 @@ function LoyaltyPage() {
           }
         `;
         
-        const response = await shopify.customerAccount.query(query);
+        const response = await api.query(query);
         const customer = response.data?.customer;
         
         if (customer) {
@@ -110,213 +120,6 @@ function LoyaltyPage() {
     fetchLoyaltyData();
   }, []);
 
-  if (loading) {
-    return (
-      <s-view padding="base">
-        <s-stack spacing="base">
-          <s-heading level={1}>{shopify.i18n.translate("loyalty.loading")}</s-heading>
-          <s-text>{shopify.i18n.translate("loyalty.loadingMessage")}</s-text>
-        </s-stack>
-      </s-view>
-    );
-  }
-
-  if (error) {
-    return (
-      <s-view padding="base">
-        <s-banner status="critical">
-          <s-stack spacing="tight">
-            <s-heading level={2}>{shopify.i18n.translate("loyalty.error")}</s-heading>
-            <s-text>{error}</s-text>
-            <s-button onPress={() => window.location.reload()}>
-              {shopify.i18n.translate("loyalty.retry")}
-            </s-button>
-          </s-stack>
-        </s-banner>
-      </s-view>
-    );
-  }
-
-  return (
-    <s-view padding="base">
-      <s-stack spacing="large">
-        {/* Header Section */}
-        <s-stack spacing="base">
-          <s-heading level={1}>{shopify.i18n.translate("loyalty.title")}</s-heading>
-          
-          {/* Points Balance Card */}
-          <s-card>
-            <s-stack spacing="base">
-              <s-inline-stack spacing="base" blockAlignment="center">
-                <s-text size="large" emphasis="bold">
-                  {loyaltyData.tier.icon} {loyaltyData.tier.name} {shopify.i18n.translate("loyalty.member")}
-                </s-text>
-                <s-badge tone="info">{loyaltyData.pointsBalance} {shopify.i18n.translate("loyalty.points")}</s-badge>
-              </s-inline-stack>
-              
-              <s-text>
-                {shopify.i18n.translate("loyalty.tierProgress", {
-                  points: loyaltyData.tier.pointsToNext,
-                  tier: loyaltyData.tier.nextTier,
-                })}
-              </s-text>
-              
-              {/* Progress bar placeholder - will be styled with CSS */}
-              <s-view>
-                <s-text size="small">{loyaltyData.tier.progressPercent}% {shopify.i18n.translate("loyalty.toNextTier")}</s-text>
-              </s-view>
-            </s-stack>
-          </s-card>
-        </s-stack>
-
-        {/* Member Information Section */}
-        <s-stack spacing="base">
-          <s-inline-stack spacing="base" blockAlignment="center">
-            <s-heading level={2}>{shopify.i18n.translate("loyalty.memberInfo")}</s-heading>
-            {!editingProfile && (
-              <s-button onPress={() => setEditingProfile(true)} kind="plain">
-                {shopify.i18n.translate("loyalty.edit")}
-              </s-button>
-            )}
-          </s-inline-stack>
-          
-          <s-card>
-            {editingProfile ? (
-              <s-stack spacing="base">
-                <s-text>{shopify.i18n.translate("loyalty.editProfile")}</s-text>
-                
-                <s-text-field
-                  label={shopify.i18n.translate("loyalty.phone")}
-                  value={editFormData.phone || customerData?.phone || ""}
-                  onChange={(value) => setEditFormData(prev => ({ ...prev, phone: value }))}
-                />
-                
-                <s-text-field
-                  label={shopify.i18n.translate("loyalty.birthDate")}
-                  value={editFormData.birthDate || customerData?.birthDate || ""}
-                  onChange={(value) => setEditFormData(prev => ({ ...prev, birthDate: value }))}
-                  placeholder="YYYY-MM-DD"
-                />
-                
-                <s-inline-stack spacing="tight">
-                  <s-button onPress={() => {
-                    setEditingProfile(false);
-                    setEditFormData({});
-                  }}>
-                    {shopify.i18n.translate("loyalty.cancel")}
-                  </s-button>
-                  <s-button onPress={handleSaveProfile} kind="primary">
-                    {shopify.i18n.translate("loyalty.save")}
-                  </s-button>
-                </s-inline-stack>
-              </s-stack>
-            ) : (
-              <s-stack spacing="tight">
-                <s-text>
-                  <s-text emphasis="bold">{shopify.i18n.translate("loyalty.name")}:</s-text> {customerData?.firstName} {customerData?.lastName}
-                </s-text>
-                <s-text>
-                  <s-text emphasis="bold">{shopify.i18n.translate("loyalty.email")}:</s-text> {customerData?.email}
-                </s-text>
-                {customerData?.phone && (
-                  <s-text>
-                    <s-text emphasis="bold">{shopify.i18n.translate("loyalty.phone")}:</s-text> {customerData.phone}
-                  </s-text>
-                )}
-                {customerData?.birthDate ? (
-                  <s-text>
-                    <s-text emphasis="bold">{shopify.i18n.translate("loyalty.birthDate")}:</s-text> {customerData.birthDate}
-                  </s-text>
-                ) : (
-                  <s-banner status="info">
-                    <s-text>{shopify.i18n.translate("loyalty.addBirthDate")}</s-text>
-                  </s-banner>
-                )}
-              </s-stack>
-            )}
-          </s-card>
-        </s-stack>
-
-        {/* Available Benefits Section */}
-        <s-stack spacing="base">
-          <s-heading level={2}>{shopify.i18n.translate("loyalty.benefits")}</s-heading>
-          
-          {redemptionSuccess && (
-            <s-banner status="success">
-              <s-stack spacing="tight">
-                <s-text emphasis="bold">{redemptionSuccess.message}</s-text>
-                {redemptionSuccess.discountCode && (
-                  <s-text>
-                    {shopify.i18n.translate("loyalty.discountCode")}: <s-text emphasis="bold">{redemptionSuccess.discountCode}</s-text>
-                  </s-text>
-                )}
-              </s-stack>
-            </s-banner>
-          )}
-          
-          <s-stack spacing="base">
-            {loyaltyData.benefits.map((benefit) => (
-              <s-card key={benefit.id}>
-                <s-stack spacing="tight">
-                  <s-inline-stack spacing="base" blockAlignment="center">
-                    <s-heading level={3}>{benefit.title}</s-heading>
-                    {benefit.eligible ? (
-                      <s-badge tone="success">{shopify.i18n.translate("loyalty.eligible")}</s-badge>
-                    ) : (
-                      <s-badge>{benefit.minPoints} {shopify.i18n.translate("loyalty.pointsRequired")}</s-badge>
-                    )}
-                  </s-inline-stack>
-                  
-                  <s-text>{benefit.description}</s-text>
-                  
-                  {benefit.eligible ? (
-                    <s-button 
-                      kind="primary" 
-                      onPress={() => handleRedeem(benefit.id)}
-                      disabled={redeeming === benefit.id}
-                    >
-                      {redeeming === benefit.id 
-                        ? shopify.i18n.translate("loyalty.redeeming")
-                        : `${shopify.i18n.translate("loyalty.redeem")} (${benefit.minPoints} ${shopify.i18n.translate("loyalty.points")})`
-                      }
-                    </s-button>
-                  ) : (
-                    <s-text size="small">
-                      {shopify.i18n.translate("loyalty.needMorePoints", {
-                        points: benefit.minPoints - loyaltyData.pointsBalance,
-                      })}
-                    </s-text>
-                  )}
-                </s-stack>
-              </s-card>
-            ))}
-          </s-stack>
-        </s-stack>
-
-        {/* Recent Activity Section */}
-        <s-stack spacing="base">
-          <s-heading level={2}>{shopify.i18n.translate("loyalty.recentActivity")}</s-heading>
-          
-          <s-card>
-            <s-stack spacing="tight">
-              {loyaltyData.recentActivity.map((activity, index) => (
-                <s-inline-stack key={index} spacing="base" blockAlignment="center">
-                  <s-text emphasis="bold" appearance={activity.type === "earned" ? "success" : "subdued"}>
-                    {activity.points > 0 ? "+" : ""}{activity.points} {shopify.i18n.translate("loyalty.points")}
-                  </s-text>
-                  <s-text>{activity.description}</s-text>
-                  <s-text size="small" appearance="subdued">
-                    {new Date(activity.createdAt).toLocaleDateString()}
-                  </s-text>
-                </s-inline-stack>
-              ))}
-            </s-stack>
-          </s-card>
-        </s-stack>
-      </s-stack>
-    </s-view>
-  );
-
   async function handleRedeem(benefitId) {
     try {
       setRedeeming(benefitId);
@@ -347,13 +150,9 @@ function LoyaltyPage() {
         pointsBalance: data.newPointsBalance,
       }));
       
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-      
     } catch (err) {
       console.error("Failed to redeem benefit:", err);
-      alert(err instanceof Error ? err.message : "Failed to redeem benefit. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to redeem benefit. Please try again.");
     } finally {
       setRedeeming(null);
     }
@@ -385,7 +184,190 @@ function LoyaltyPage() {
       
     } catch (err) {
       console.error("Failed to update profile:", err);
-      alert(err instanceof Error ? err.message : "Failed to update profile. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to update profile. Please try again.");
     }
   }
+
+  if (loading) {
+    return (
+      <BlockStack spacing="base">
+        <Heading level={1}>Loyalty Program</Heading>
+        <Text>Loading your loyalty status...</Text>
+      </BlockStack>
+    );
+  }
+
+  if (error) {
+    return (
+      <BlockStack spacing="base">
+        <Banner status="critical">
+          <BlockStack spacing="tight">
+            <Heading level={2}>Error</Heading>
+            <Text>{error}</Text>
+          </BlockStack>
+        </Banner>
+      </BlockStack>
+    );
+  }
+
+  return (
+    <BlockStack spacing="large">
+      <Heading level={1}>Loyalty Program</Heading>
+      
+      <BlockStack spacing="base" border="base" padding="base">
+        <InlineStack spacing="base" blockAlignment="center">
+          <Text size="large" emphasis="bold">
+            {loyaltyData.tier.icon} {loyaltyData.tier.name} Member
+          </Text>
+          <Text emphasis="bold">{loyaltyData.pointsBalance} points</Text>
+        </InlineStack>
+        
+        {loyaltyData.tier.nextTier && (
+          <Text>
+            {loyaltyData.tier.pointsToNext} points to {loyaltyData.tier.nextTier}
+          </Text>
+        )}
+        
+        <Text size="small">{loyaltyData.tier.progressPercent}% to next tier</Text>
+      </BlockStack>
+
+      <Divider />
+
+      <BlockStack spacing="base">
+        <InlineStack spacing="base" blockAlignment="center">
+          <Heading level={2}>Member Information</Heading>
+          {!editingProfile && (
+            <Button onPress={() => setEditingProfile(true)}>
+              Edit
+            </Button>
+          )}
+        </InlineStack>
+        
+        {editingProfile ? (
+          <BlockStack spacing="base" border="base" padding="base">
+            <Text>Edit your profile information</Text>
+            
+            <TextField
+              label="Phone"
+              value={editFormData.phone || customerData?.phone || ""}
+              onChange={(value) => setEditFormData(prev => ({ ...prev, phone: value }))}
+            />
+            
+            <TextField
+              label="Birth Date (YYYY-MM-DD)"
+              value={editFormData.birthDate || customerData?.birthDate || ""}
+              onChange={(value) => setEditFormData(prev => ({ ...prev, birthDate: value }))}
+            />
+            
+            <InlineStack spacing="tight">
+              <Button onPress={() => {
+                setEditingProfile(false);
+                setEditFormData({});
+              }}>
+                Cancel
+              </Button>
+              <Button onPress={handleSaveProfile}>
+                Save
+              </Button>
+            </InlineStack>
+          </BlockStack>
+        ) : (
+          <BlockStack spacing="tight" border="base" padding="base">
+            <Text>
+              <Text emphasis="bold">Name:</Text> {customerData?.firstName} {customerData?.lastName}
+            </Text>
+            <Text>
+              <Text emphasis="bold">Email:</Text> {customerData?.email}
+            </Text>
+            {customerData?.phone && (
+              <Text>
+                <Text emphasis="bold">Phone:</Text> {customerData.phone}
+              </Text>
+            )}
+            {customerData?.birthDate ? (
+              <Text>
+                <Text emphasis="bold">Birth Date:</Text> {customerData.birthDate}
+              </Text>
+            ) : (
+              <Banner status="info">
+                <Text>Add your birth date to receive birthday rewards!</Text>
+              </Banner>
+            )}
+          </BlockStack>
+        )}
+      </BlockStack>
+
+      <Divider />
+
+      <BlockStack spacing="base">
+        <Heading level={2}>Available Benefits</Heading>
+        
+        {redemptionSuccess && (
+          <Banner status="success">
+            <BlockStack spacing="tight">
+              <Text emphasis="bold">{redemptionSuccess.message}</Text>
+              {redemptionSuccess.discountCode && (
+                <Text>
+                  Discount Code: <Text emphasis="bold">{redemptionSuccess.discountCode}</Text>
+                </Text>
+              )}
+            </BlockStack>
+          </Banner>
+        )}
+        
+        <BlockStack spacing="base">
+          {loyaltyData.benefits.map((benefit) => (
+            <BlockStack key={benefit.id} spacing="tight" border="base" padding="base">
+              <InlineStack spacing="base" blockAlignment="center">
+                <Heading level={3}>{benefit.title}</Heading>
+                {benefit.eligible ? (
+                  <Text emphasis="bold">Eligible</Text>
+                ) : (
+                  <Text>{benefit.minPoints} points required</Text>
+                )}
+              </InlineStack>
+              
+              <Text>{benefit.description}</Text>
+              
+              {benefit.eligible ? (
+                <Button 
+                  onPress={() => handleRedeem(benefit.id)}
+                  disabled={redeeming === benefit.id}
+                >
+                  {redeeming === benefit.id 
+                    ? "Redeeming..."
+                    : `Redeem (${benefit.minPoints} points)`
+                  }
+                </Button>
+              ) : (
+                <Text size="small">
+                  Need {benefit.minPoints - loyaltyData.pointsBalance} more points
+                </Text>
+              )}
+            </BlockStack>
+          ))}
+        </BlockStack>
+      </BlockStack>
+
+      <Divider />
+
+      <BlockStack spacing="base">
+        <Heading level={2}>Recent Activity</Heading>
+        
+        <BlockStack spacing="tight" border="base" padding="base">
+          {loyaltyData.recentActivity.map((activity, index) => (
+            <InlineStack key={index} spacing="base" blockAlignment="center">
+              <Text emphasis="bold">
+                {activity.points > 0 ? "+" : ""}{activity.points} points
+              </Text>
+              <Text>{activity.description}</Text>
+              <Text size="small">
+                {new Date(activity.createdAt).toLocaleDateString()}
+              </Text>
+            </InlineStack>
+          ))}
+        </BlockStack>
+      </BlockStack>
+    </BlockStack>
+  );
 }

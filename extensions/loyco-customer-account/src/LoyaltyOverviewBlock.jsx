@@ -1,10 +1,14 @@
-import '@shopify/ui-extensions/preact';
-import { render } from "preact";
-import { useState, useEffect } from "preact/hooks";
+import {
+  reactExtension,
+  Banner,
+  Text,
+  BlockStack,
+  InlineStack,
+  Link,
+} from '@shopify/ui-extensions-react/customer-account';
+import { useState, useEffect } from 'react';
 
-export default async () => {
-  render(<LoyaltyOverviewBlock />, document.body);
-};
+export default reactExtension('customer-account.block.render', () => <LoyaltyOverviewBlock />);
 
 function LoyaltyOverviewBlock() {
   const [loading, setLoading] = useState(true);
@@ -51,9 +55,9 @@ function LoyaltyOverviewBlock() {
 
   if (loading) {
     return (
-      <s-banner>
-        <s-text>{shopify.i18n.translate("loyalty.loading")}</s-text>
-      </s-banner>
+      <Banner>
+        <Text>Loading loyalty information...</Text>
+      </Banner>
     );
   }
 
@@ -62,24 +66,24 @@ function LoyaltyOverviewBlock() {
   }
 
   return (
-    <s-banner status="info">
-      <s-stack spacing="tight">
-        <s-inline-stack spacing="tight" blockAlignment="center">
-          <s-text emphasis="bold">
-            {loyaltyData.tier.icon} {loyaltyData.tier.name} {shopify.i18n.translate("loyalty.member")}
-          </s-text>
-          <s-text>•</s-text>
-          <s-text emphasis="bold">
-            {loyaltyData.pointsBalance} {shopify.i18n.translate("loyalty.points")}
-          </s-text>
-        </s-inline-stack>
+    <Banner status="info">
+      <BlockStack spacing="tight">
+        <InlineStack spacing="tight" blockAlignment="center">
+          <Text emphasis="bold">
+            {loyaltyData.tier.icon} {loyaltyData.tier.name} Member
+          </Text>
+          <Text>•</Text>
+          <Text emphasis="bold">
+            {loyaltyData.pointsBalance} points
+          </Text>
+        </InlineStack>
         
-        <s-text>{shopify.i18n.translate("loyalty.overviewMessage")}</s-text>
+        <Text>View and redeem your loyalty rewards</Text>
         
-        <s-link to="/account/loyalty">
-          {shopify.i18n.translate("loyalty.viewRewards")}
-        </s-link>
-      </s-stack>
-    </s-banner>
+        <Link to="/account/loyalty">
+          View Rewards
+        </Link>
+      </BlockStack>
+    </Banner>
   );
 }
