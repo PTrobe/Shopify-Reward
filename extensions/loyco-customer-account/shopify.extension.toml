@@ -5,15 +5,12 @@
 # https://shopify.dev/docs/api/usage/versioning
 api_version = "2025-07"
 
+# Extension for block renders (order status and profile blocks)
 [[extensions]]
-name = "Loyco Customer Account"
-handle = "loyco-customer-account"
+name = "Loyco Customer Account Blocks"
+handle = "loyco-customer-account-blocks"
+uid = "d7acdbc4-67b3-3c7a-55c4-415a168b5ff96a003d97"
 type = "ui_extension"
-uid = "bbcd887a-7923-bd2f-eb86-0b947edb161b0a1925b8"
-
-# Controls where in Shopify your extension will be injected,
-# and the file that contains your extension’s source code. Learn more:
-# https://shopify.dev/docs/api/customer-account-ui-extensions/unstable/extension-targets-overview
 
 [[extensions.targeting]]
 module = "./src/OrderStatusBlock.jsx"
@@ -21,22 +18,23 @@ target = "customer-account.order-status.block.render"
 
 [[extensions.targeting]]
 module = "./src/LoyaltyOverviewBlock.jsx"
-target = "customer-account.order-status.block.render"
-
-[[extensions.targeting]]
-module = "./src/LoyaltyOverviewBlock.jsx"
 target = "customer-account.profile.block.render"
+
+[extensions.capabilities]
+api_access = true
+network_access = true
+
+# Extension for page render (Loyco Club page)
+[[extensions]]
+name = "Loyco Customer Account Page"
+handle = "loyco-customer-account-page"
+uid = "32dbe592-47b6-fca2-3dca-4180c443588b05414677"
+type = "ui_extension"
 
 [[extensions.targeting]]
 module = "./src/LoyaltyPage.jsx"
 target = "customer-account.page.render"
 
 [extensions.capabilities]
-# Gives your extension access to directly query Shopify's storefront API.
-# https://shopify.dev/docs/api/customer-account-ui-extensions/unstable/configuration#api-access
 api_access = true
-
-# Gives your extension access to make external network calls, using the
-# JavaScript `fetch()` API. Learn more:
-# https://shopify.dev/docs/api/customer-account-ui-extensions/unstable/configuration#network-access
 network_access = true

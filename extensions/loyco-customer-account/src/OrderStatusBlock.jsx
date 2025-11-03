@@ -1,16 +1,17 @@
-import '@shopify/ui-extensions/preact';
-import {render} from "preact";
+import {
+  reactExtension,
+  Banner,
+  Text,
+} from '@shopify/ui-extensions-react/customer-account';
 
-export default async () => {
-  render(<Extension />, document.body)
-}
+export default reactExtension('customer-account.order-status.block.render', () => <OrderStatusExtension />);
 
-function Extension() {
+function OrderStatusExtension() {
   return (
-    <s-banner>
-      <s-text>
-        {shopify.i18n.translate("earnPoints")}
-      </s-text>
-    </s-banner>
+    <Banner title="✅ Loyco order status extension loaded">
+      <Text>
+        Earn points on your order!
+      </Text>
+    </Banner>
   );
 }
