@@ -1,51 +1,64 @@
-import '@shopify/ui-extensions/preact';
-import {useState, useEffect} from "preact/hooks";
-import {render} from "preact";
+import {
+  reactExtension,
+  Banner,
+  Text,
+  BlockStack,
+  InlineStack,
+  Divider,
+  useCustomer,
+  useTotalAmount,
+  useShop,
+} from '@shopify/ui-extensions-react/checkout';
+import {useState, useEffect} from 'react';
 
-// 1. Export the extension
-export default async () => {
-  render(<LoyaltyCheckoutExtension />, document.body)
-};
+export default reactExtension('purchase.checkout.block.render', () => <LoyaltyCheckoutExtension />);
 
 function LoyaltyCheckoutExtension() {
   const [loyaltyData, setLoyaltyData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Get checkout data
-  const totalAmount = shopify.cost.totalAmount.amount;
-  const customerId = shopify.customer?.id;
-  const shop = shopify.shop.domain;
+  const customer = useCustomer();
+  const totalAmount = useTotalAmount();
+  const shop = useShop();
+
+  const customerId = customer?.id;
+  const shopDomain = shop?.myshopifyDomain;
+  const orderTotal = totalAmount?.amount;
 
   useEffect(() => {
-    if (customerId && shop) {
+    if (customerId && shopDomain && orderTotal) {
       loadLoyaltyData();
     } else {
       setLoading(false);
     }
-  }, [customerId, shop, totalAmount]);
+  }, [customerId, shopDomain, orderTotal]);
 
   const loadLoyaltyData = async () => {
     try {
       setLoading(true);
 
       // Call our app proxy API to get customer loyalty status
-      const response = await fetch(`/apps/loyco_rewards/api/customer/${customerId}/status?shop=${shop}`);
+      const url = `https://${shopDomain}/apps/loyco-rewards/api/loyalty-summary?logged_in_customer_id=${customerId}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch loyalty data: ${response.statusText}`);
+      }
+      
       const data = await response.json();
 
-      if (data.enrolled && data.program) {
+      if (data.enrolled && data.pointsBalance !== undefined) {
         // Calculate points that will be earned
-        const orderTotal = parseFloat(totalAmount);
-        const pointsPerDollar = data.program.pointsPerDollar || 1;
-        const tierMultiplier = data.tier?.pointsMultiplier || 1;
-        const basePoints = Math.floor(orderTotal * pointsPerDollar);
-        const totalPoints = Math.floor(basePoints * tierMultiplier);
+        const amount = parseFloat(orderTotal);
+        const pointsPerDollar = 1; // Default, should come from program settings
+        const basePoints = Math.floor(amount * pointsPerDollar);
 
         setLoyaltyData({
           ...data,
-          pointsToEarn: totalPoints,
+          pointsToEarn: basePoints,
           basePoints,
-          bonusPoints: totalPoints - basePoints
+          bonusPoints: 0
         });
       } else {
         setLoyaltyData(data);
@@ -58,88 +71,95 @@ function LoyaltyCheckoutExtension() {
     }
   };
 
-  // Don't render anything if customer is not logged in
   if (!customerId) {
-    return null;
+    return (
+      <Banner title="🎁 Join Our Loyalty Program">
+        <BlockStack spacing="tight">
+          <Text>
+            Sign in to earn points on every purchase and unlock exclusive rewards!
+          </Text>
+        </BlockStack>
+      </Banner>
+    );
   }
 
   if (loading) {
     return (
-      <s-banner heading="🎁 Loyalty Rewards">
-        <s-text>Loading your loyalty status...</s-text>
-      </s-banner>
+      <Banner title="🎁 Loyalty Rewards">
+        <Text>Loading your loyalty status...</Text>
+      </Banner>
     );
   }
 
   if (error) {
     return (
-      <s-banner tone="subdued">
-        <s-text>{error}</s-text>
-      </s-banner>
+      <Banner status="warning">
+        <Text>{error}</Text>
+      </Banner>
     );
   }
 
   // Show enrollment prompt for non-enrolled customers
   if (!loyaltyData?.enrolled) {
     return (
-      <s-banner heading="🎁 Join Our Loyalty Program" tone="info">
-        <s-stack gap="tight">
-          <s-text>
+      <Banner title="🎁 Join Our Loyalty Program" status="info">
+        <BlockStack spacing="tight">
+          <Text>
             Start earning points on every purchase and unlock exclusive rewards!
-          </s-text>
-          {loyaltyData?.program && (
-            <s-text appearance="subdued">
-              Earn {Math.floor(parseFloat(totalAmount) * (loyaltyData.program.pointsPerDollar || 1))} points on this order when you join!
-            </s-text>
+          </Text>
+          {orderTotal && (
+            <Text appearance="subdued">
+              Earn {Math.floor(parseFloat(orderTotal))} points on this order when you join!
+            </Text>
           )}
-        </s-stack>
-      </s-banner>
+        </BlockStack>
+      </Banner>
     );
   }
 
   // Show loyalty benefits for enrolled customers
   return (
-    <s-banner heading="🎁 Loyalty Rewards" tone="success">
-      <s-stack gap="base">
+    <Banner title="🎁 Loyalty Rewards" status="success">
+      <BlockStack spacing="base">
         {/* Points to earn */}
         {loyaltyData.pointsToEarn > 0 && (
-          <s-stack gap="tight">
-            <s-text type="emphasis">
-              You'll earn {loyaltyData.pointsToEarn.toLocaleString()} {loyaltyData.program.pointsName || 'points'}
-            </s-text>
+          <BlockStack spacing="tight">
+            <Text emphasis="bold">
+              You'll earn {loyaltyData.pointsToEarn.toLocaleString()} points
+            </Text>
 
             {loyaltyData.bonusPoints > 0 && (
-              <s-text appearance="subdued" size="small">
+              <Text size="small" appearance="subdued">
                 {loyaltyData.basePoints.toLocaleString()} base + {loyaltyData.bonusPoints.toLocaleString()} tier bonus
-              </s-text>
+              </Text>
             )}
 
-            <s-text appearance="subdued" size="small">
-              New balance: {(loyaltyData.customer.pointsBalance + loyaltyData.pointsToEarn).toLocaleString()} {loyaltyData.program.pointsName || 'points'}
-            </s-text>
-          </s-stack>
+            <Text size="small" appearance="subdued">
+              New balance: {(loyaltyData.pointsBalance + loyaltyData.pointsToEarn).toLocaleString()} points
+            </Text>
+          </BlockStack>
         )}
 
         {/* Available rewards */}
-        {loyaltyData.availableRewards && loyaltyData.availableRewards.length > 0 && (
+        {loyaltyData.benefits && loyaltyData.benefits.length > 0 && (
           <>
-            <s-divider />
-            <s-stack gap="tight">
-              <s-text size="small" type="emphasis">
+            <Divider />
+            <BlockStack spacing="tight">
+              <Text size="small" emphasis="bold">
                 🏆 You can redeem:
-              </s-text>
-              {loyaltyData.availableRewards.slice(0, 2).map((reward, index) => (
-                <s-inline-stack key={index} gap="tight" block-alignment="center">
-                  <s-text size="small">{reward.name}</s-text>
-                  <s-text size="small" appearance="subdued">
-                    ({reward.pointsCost.toLocaleString()} pts)
-                  </s-text>
-                </s-inline-stack>
+              </Text>
+              {loyaltyData.benefits.slice(0, 2).map((benefit, index) => (
+                <InlineStack key={index} spacing="tight" blockAlignment="center">
+                  <Text size="small">{benefit.title}</Text>
+                  <Text size="small" appearance="subdued">
+                    ({benefit.minPoints.toLocaleString()} pts)
+                  </Text>
+                </InlineStack>
               ))}
-            </s-stack>
+            </BlockStack>
           </>
         )}
-      </s-stack>
-    </s-banner>
+      </BlockStack>
+    </Banner>
   );
 }
