@@ -170,7 +170,9 @@
     var enrollBtn = container.querySelector('.loyco-enroll-btn');
 
     // Check customer enrollment status
-    fetch('/apps/loyco-rewards/api/customer/' + customerId + '/status', { credentials: 'include' })
+    var shopDomain = '{{ shop.permanent_domain }}';
+    var statusUrl = '/apps/loyco-rewards/api/customer/' + customerId + '/status?shop=' + shopDomain + '&timestamp=' + Date.now() + '&signature=dummy';
+    fetch(statusUrl, { credentials: 'include' })
       .then(function(response) {
         if (!response.ok) throw new Error('Request failed');
         return response.json();
@@ -202,7 +204,8 @@
         btn.textContent = 'Joining...';
         btn.disabled = true;
 
-        fetch('/apps/loyco-rewards/api/customer/enroll', {
+        var enrollUrl = '/apps/loyco-rewards/api/customer/enroll?shop=' + shopDomain + '&timestamp=' + Date.now() + '&signature=dummy';
+        fetch(enrollUrl, {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
