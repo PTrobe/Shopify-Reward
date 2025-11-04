@@ -171,7 +171,7 @@
 
     // Check customer enrollment status
     var shopDomain = '{{ shop.permanent_domain }}';
-    var statusUrl = '/apps/loyco-rewards/api/customer/' + customerId + '/status?shop=' + shopDomain + '&timestamp=' + Date.now() + '&signature=dummy';
+    var statusUrl = '/apps/loyco-rewards/api/loyalty-summary?logged_in_customer_id=' + customerId + '&shop=' + shopDomain + '&timestamp=' + Date.now();
     fetch(statusUrl, { credentials: 'include' })
       .then(function(response) {
         if (!response.ok) throw new Error('Request failed');
@@ -204,7 +204,7 @@
         btn.textContent = 'Joining...';
         btn.disabled = true;
 
-        var enrollUrl = '/apps/loyco-rewards/api/customer/enroll?shop=' + shopDomain + '&timestamp=' + Date.now() + '&signature=dummy';
+        var enrollUrl = '/apps/loyco-rewards/api/customer/enroll?shop=' + shopDomain + '&timestamp=' + Date.now();
         fetch(enrollUrl, {
           method: 'POST',
           credentials: 'include',

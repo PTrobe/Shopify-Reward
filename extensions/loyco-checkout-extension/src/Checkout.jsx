@@ -26,18 +26,22 @@ function CheckoutLoyaltyBlock() {
   // Fetch customer loyalty status
   useEffect(() => {
     const fetchCustomerStatus = async () => {
-      if (!customer?.id || !shop?.domain) {
-        console.log('Missing customer or shop data');
+      if (!customer?.id) {
+        console.log('No customer logged in');
         setLoading(false);
         return;
       }
 
       try {
-        console.log('Fetching customer status for:', customer.id);
-        const url = `https://${shop.domain}/apps/loyco-rewards/api/customer/${customer.id}/status?shop=${shop.domain}&timestamp=${Date.now()}&signature=dummy`;
+        const numericCustomerId = customer.id.split('/').pop();
+        console.log('Fetching customer status for:', numericCustomerId);
+        
+        const shopDomain = shop?.myshopifyDomain || shop?.domain;
+        const url = `/apps/loyco-rewards/api/loyalty-summary?logged_in_customer_id=${numericCustomerId}&shop=${shopDomain}&timestamp=${Date.now()}`;
 
         const response = await fetch(url, {
           method: 'GET',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -59,11 +63,11 @@ function CheckoutLoyaltyBlock() {
     };
 
     fetchCustomerStatus();
-  }, [customer?.id, shop?.domain]);
+  }, [customer?.id, shop?.myshopifyDomain, shop?.domain]);
 
   // Handle customer enrollment
   const handleEnroll = async () => {
-    if (!customer?.id || !shop?.domain || enrolling) {
+    if (!customer?.id || enrolling) {
       return;
     }
 
@@ -71,16 +75,20 @@ function CheckoutLoyaltyBlock() {
     setError(null);
 
     try {
-      console.log('Enrolling customer:', customer.id);
-      const url = `https://${shop.domain}/apps/loyco-rewards/api/customer/enroll?shop=${shop.domain}&timestamp=${Date.now()}&signature=dummy`;
+      const numericCustomerId = customer.id.split('/').pop();
+      console.log('Enrolling customer:', numericCustomerId);
+      
+      const shopDomain = shop?.myshopifyDomain || shop?.domain;
+      const url = `/apps/loyco-rewards/api/customer/enroll?shop=${shopDomain}&timestamp=${Date.now()}`;
 
       const response = await fetch(url, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          shopifyCustomerId: customer.id,
+          shopifyCustomerId: numericCustomerId,
           email: customer.email,
           firstName: customer.firstName,
           lastName: customer.lastName,
