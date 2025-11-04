@@ -48,18 +48,55 @@
         {{ block.settings.custom_message | replace: 'POINTS_PLACEHOLDER', points_earned | replace: 'CURRENCY_PLACEHOLDER', block.settings.points_currency }}
       </span>
     {% else %}
-      <span style="
-        color: {{ block.settings.text_color }};
-        font-size: {{ block.settings.text_size }}px;
-        font-weight: {{ block.settings.font_weight }};
-        line-height: 1.4;
-      ">
-        {% if customer %}
-          Earn {{ points_earned }} {{ block.settings.points_currency }} with this purchase
-        {% else %}
-          Sign up and earn {{ points_earned }} {{ block.settings.points_currency }}
-        {% endif %}
-      </span>
+      {% if customer %}
+        <div id="loyco-customer-info-{{ block.id }}" data-customer-id="{{ customer.id }}" style="
+          color: {{ block.settings.text_color }};
+          font-size: {{ block.settings.text_size }}px;
+          font-weight: {{ block.settings.font_weight }};
+          line-height: 1.4;
+        ">
+          <span class="loyco-main-text">Earn {{ points_earned }} {{ block.settings.points_currency }} with this purchase</span>
+          <div class="loyco-enrollment-area" style="display: none; margin-top: 8px;">
+            <button class="loyco-enroll-btn" style="
+              background: {{ block.settings.enroll_button_bg | default: '#F59E0B' }};
+              color: {{ block.settings.enroll_button_text | default: '#FFFFFF' }};
+              border: none;
+              padding: 8px 16px;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: inherit;
+              transition: opacity 0.2s ease;
+            " onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              {{ block.settings.enroll_button_label | default: 'Join Now' }}
+            </button>
+          </div>
+        </div>
+      {% else %}
+        <div style="
+          color: {{ block.settings.text_color }};
+          font-size: {{ block.settings.text_size }}px;
+          font-weight: {{ block.settings.font_weight }};
+          line-height: 1.4;
+        ">
+          <span>Sign up and earn {{ points_earned }} {{ block.settings.points_currency }}</span>
+          {% if block.settings.show_guest_signup %}
+          <div style="margin-top: 8px;">
+            <a href="{{ routes.account_url }}" style="
+              background: {{ block.settings.signup_button_bg }};
+              color: {{ block.settings.signup_button_text }};
+              padding: 6px 12px;
+              border-radius: 4px;
+              text-decoration: none;
+              font-size: {{ block.settings.text_size | times: 0.9 }}px;
+              display: inline-block;
+              transition: opacity 0.2s ease;
+            " onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              {{ block.settings.signup_button_text_label }}
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      {% endif %}
     {% endif %}
 
     {% if block.settings.show_bonus_message and block.settings.bonus_message != blank %}
@@ -117,6 +154,96 @@
   }
 }
 </style>
+
+{% if customer %}
+<script>
+(function() {
+  try {
+    var container = document.getElementById('loyco-customer-info-{{ block.id }}');
+    if (!container) return;
+
+    var customerId = container.getAttribute('data-customer-id');
+    if (!customerId) return;
+
+    var mainTextEl = container.querySelector('.loyco-main-text');
+    var enrollmentArea = container.querySelector('.loyco-enrollment-area');
+    var enrollBtn = container.querySelector('.loyco-enroll-btn');
+
+    // Check customer enrollment status
+    fetch('/apps/loyco-rewards/api/customer/' + customerId + '/status', { credentials: 'include' })
+      .then(function(response) {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
+      .then(function(data) {
+        if (data && !data.enrolled) {
+          // Customer not enrolled - show enrollment button
+          mainTextEl.textContent = 'Join and earn {{ points_earned }} {{ block.settings.points_currency }}!';
+          enrollmentArea.style.display = 'block';
+        } else if (data && data.enrolled && data.customer) {
+          // Customer enrolled - show balance
+          mainTextEl.textContent = 'Earn {{ points_earned }} {{ block.settings.points_currency }} with this purchase';
+          var balanceEl = document.createElement('div');
+          balanceEl.style.cssText = 'margin-top: 4px; font-size: 0.9em; opacity: 0.8;';
+          balanceEl.textContent = 'Current balance: ' + (data.customer.pointsBalance || 0) + ' ' + (data.program ? data.program.pointsName : '{{ block.settings.points_currency }}');
+          container.appendChild(balanceEl);
+        }
+      })
+      .catch(function() {
+        // Keep default text on error
+        console.warn('Loyco: Unable to load customer status');
+      });
+
+    // Handle enrollment
+    if (enrollBtn) {
+      enrollBtn.addEventListener('click', function() {
+        var btn = this;
+        var originalText = btn.textContent;
+        btn.textContent = 'Joining...';
+        btn.disabled = true;
+
+        fetch('/apps/loyco-rewards/api/customer/enroll', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shopifyCustomerId: customerId,
+            email: '{{ customer.email }}',
+            firstName: '{{ customer.first_name }}',
+            lastName: '{{ customer.last_name }}',
+            phone: '{{ customer.phone }}'
+          })
+        })
+        .then(function(response) {
+          if (!response.ok) throw new Error('Enrollment failed');
+          return response.json();
+        })
+        .then(function(data) {
+          if (data.success) {
+            mainTextEl.textContent = 'Enrolled! Earn {{ points_earned }} {{ block.settings.points_currency }}';
+            enrollmentArea.style.display = 'none';
+            if (data.welcomeBonus) {
+              var welcomeEl = document.createElement('div');
+              welcomeEl.style.cssText = 'margin-top: 8px; padding: 8px; background: #10B981; color: white; border-radius: 4px; font-size: 0.9em;';
+              welcomeEl.textContent = '🎉 Welcome bonus: ' + data.welcomeBonus.points + ' {{ block.settings.points_currency }}!';
+              container.appendChild(welcomeEl);
+            }
+          } else {
+            throw new Error('Enrollment failed');
+          }
+        })
+        .catch(function() {
+          btn.textContent = 'Try Again';
+          btn.disabled = false;
+        });
+      });
+    }
+  } catch (error) {
+    console.warn('Loyco: Product points script error', error);
+  }
+})();
+</script>
+{% endif %}
 {% endif %}
 
 {% schema %}
@@ -341,6 +468,48 @@
       "id": "hide_progress_mobile",
       "label": "Hide progress hint on mobile",
       "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_guest_signup",
+      "label": "Show signup button for guests",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "signup_button_text_label",
+      "label": "Guest signup button text",
+      "default": "Sign Up"
+    },
+    {
+      "type": "color",
+      "id": "signup_button_bg",
+      "label": "Guest signup button background",
+      "default": "#2563EB"
+    },
+    {
+      "type": "color",
+      "id": "signup_button_text",
+      "label": "Guest signup button text color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "text",
+      "id": "enroll_button_label",
+      "label": "Enrollment button text",
+      "default": "Join Now"
+    },
+    {
+      "type": "color",
+      "id": "enroll_button_bg",
+      "label": "Enrollment button background",
+      "default": "#F59E0B"
+    },
+    {
+      "type": "color",
+      "id": "enroll_button_text",
+      "label": "Enrollment button text color",
+      "default": "#FFFFFF"
     }
   ]
 }

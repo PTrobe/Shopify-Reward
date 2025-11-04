@@ -5,104 +5,211 @@ import {
   BlockStack,
   InlineStack,
   Link,
+  Button,
+  Spinner,
+  useApi,
 } from '@shopify/ui-extensions-react/customer-account';
 import { useState, useEffect } from 'react';
 
-export default reactExtension('customer-account.block.render', () => <LoyaltyOverviewBlock />);
+export default reactExtension('customer-account.profile.block.render', () => <LoyaltyOverviewBlock />);
 
 function LoyaltyOverviewBlock() {
+  const { customer, shop } = useApi();
+  const [customerStatus, setCustomerStatus] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [loyaltyData, setLoyaltyData] = useState(null);
-  const [showTestBanner] = useState(true);
+  const [enrolling, setEnrolling] = useState(false);
+  const [error, setError] = useState(null);
 
+  console.log('🚨 LOYCO CUSTOMER ACCOUNT BLOCK: Extension function called');
+  console.log('Customer:', customer);
+  console.log('Shop:', shop);
+
+  // Fetch customer loyalty status
   useEffect(() => {
-    async function fetchLoyaltySummary() {
+    const fetchCustomerStatus = async () => {
+      if (!customer?.id || !shop?.domain) {
+        console.log('Missing customer or shop data');
+        setLoading(false);
+        return;
+      }
+
       try {
-        setLoading(true);
-        
-        const response = await fetch('/apps/loyco-rewards/api/loyalty-summary', {
+        console.log('Fetching customer status for:', customer.id);
+        const url = `https://${shop.domain}/apps/loyco-rewards/api/customer/${customer.id}/status?shop=${shop.domain}&timestamp=${Date.now()}&signature=dummy`;
+
+        const response = await fetch(url, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
         });
-        
+
         if (!response.ok) {
-          throw new Error(`Failed to fetch loyalty summary: ${response.statusText}`);
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
-        if (data.error || !data.enrolled) {
-          setLoading(false);
-          return;
-        }
-        
-        setLoyaltyData({
-          pointsBalance: data.pointsBalance || 0,
-          tier: data.tier || {
-            name: "Member",
-            icon: "⭐",
-          },
-        });
-        setLoading(false);
+        console.log('Customer status response:', data);
+        setCustomerStatus(data);
       } catch (err) {
-        console.error("Failed to fetch loyalty summary:", err);
+        console.error('Error fetching customer status:', err);
+        setError('Failed to load loyalty status');
+      } finally {
         setLoading(false);
       }
+    };
+
+    fetchCustomerStatus();
+  }, [customer?.id, shop?.domain]);
+
+  // Handle customer enrollment
+  const handleEnroll = async () => {
+    if (!customer?.id || !shop?.domain || enrolling) {
+      return;
     }
-    fetchLoyaltySummary();
-  }, []);
+
+    setEnrolling(true);
+    setError(null);
+
+    try {
+      console.log('Enrolling customer:', customer.id);
+      const url = `https://${shop.domain}/apps/loyco-rewards/api/customer/enroll?shop=${shop.domain}&timestamp=${Date.now()}&signature=dummy`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shopifyCustomerId: customer.id,
+          email: customer.email,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          phone: customer.phone,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Enrollment response:', data);
+
+      if (data.success) {
+        // Refresh customer status
+        setCustomerStatus({
+          enrolled: true,
+          customer: data.customer,
+          program: data.program,
+          welcomeBonus: data.welcomeBonus,
+        });
+      } else {
+        throw new Error(data.error || 'Enrollment failed');
+      }
+    } catch (err) {
+      console.error('Error enrolling customer:', err);
+      setError(err.message || 'Failed to join loyalty program');
+    } finally {
+      setEnrolling(false);
+    }
+  };
 
   if (loading) {
     return (
-      <BlockStack spacing="tight">
-        {showTestBanner && (
-          <Banner status="info">
-            <Text>✅ Loyco overview block loaded</Text>
-          </Banner>
-        )}
-        <Banner>
-          <Text>Loading loyalty information...</Text>
+      <BlockStack spacing="base">
+        <Spinner size="small" />
+        <Text size="small">Loading loyalty information...</Text>
+      </BlockStack>
+    );
+  }
+
+  if (error) {
+    return (
+      <BlockStack spacing="base">
+        <Banner status="critical">
+          <Text>{error}</Text>
         </Banner>
       </BlockStack>
     );
   }
 
-  if (!loyaltyData) {
-    return showTestBanner ? (
-      <Banner status="info">
-        <Text>✅ Loyco overview block loaded (no data)</Text>
-      </Banner>
-    ) : null;
+  // Customer is not enrolled - show enrollment option
+  if (!customerStatus?.enrolled) {
+    return (
+      <BlockStack spacing="base">
+        <Banner status="info">
+          <BlockStack spacing="small">
+            <Text emphasis="bold">Join {customerStatus?.program?.name || 'Our Loyalty Program'}!</Text>
+            <Text>Earn {customerStatus?.program?.pointsName || 'points'} on every purchase and unlock exclusive rewards.</Text>
+            {customerStatus?.program?.welcomeBonus > 0 && (
+              <Text>Welcome bonus: {customerStatus.program.welcomeBonus} {customerStatus.program.pointsName}!</Text>
+            )}
+          </BlockStack>
+        </Banner>
+
+        <InlineStack spacing="base">
+          <Button
+            kind="primary"
+            onPress={handleEnroll}
+            loading={enrolling}
+            disabled={enrolling}
+          >
+            {enrolling ? 'Joining...' : 'Join Now'}
+          </Button>
+        </InlineStack>
+      </BlockStack>
+    );
   }
 
+  // Customer is enrolled - show loyalty dashboard
+  const { customer: loyaltyCustomer, program, tier, nextTier } = customerStatus;
+
   return (
-    <BlockStack spacing="tight">
-      {showTestBanner && (
-        <Banner status="info">
-          <Text>✅ Loyco overview block loaded</Text>
+    <BlockStack spacing="base">
+      <Banner status="success">
+        <Text emphasis="bold">Welcome to {program?.name}!</Text>
+      </Banner>
+
+      <BlockStack spacing="small">
+        <InlineStack spacing="base">
+          <Text emphasis="bold">Points Balance:</Text>
+          <Text>{loyaltyCustomer?.pointsBalance || 0} {program?.pointsName}</Text>
+        </InlineStack>
+
+        <InlineStack spacing="base">
+          <Text emphasis="bold">Lifetime Points:</Text>
+          <Text>{loyaltyCustomer?.lifetimePoints || 0} {program?.pointsName}</Text>
+        </InlineStack>
+
+        {tier && (
+          <InlineStack spacing="base">
+            <Text emphasis="bold">Current Tier:</Text>
+            <Text>{tier.name}</Text>
+          </InlineStack>
+        )}
+
+        {nextTier && (
+          <InlineStack spacing="base">
+            <Text emphasis="bold">Next Tier:</Text>
+            <Text>{nextTier.name} ({nextTier.pointsNeeded} more {program?.pointsName})</Text>
+          </InlineStack>
+        )}
+
+        {loyaltyCustomer?.referralCode && (
+          <InlineStack spacing="base">
+            <Text emphasis="bold">Referral Code:</Text>
+            <Text>{loyaltyCustomer.referralCode}</Text>
+          </InlineStack>
+        )}
+      </BlockStack>
+
+      {customerStatus.welcomeBonus && (
+        <Banner status="success">
+          <Text>🎉 Welcome bonus awarded: {customerStatus.welcomeBonus.points} {program?.pointsName}!</Text>
         </Banner>
       )}
-      <Banner status="info">
-        <BlockStack spacing="tight">
-        <InlineStack spacing="tight" blockAlignment="center">
-          <Text emphasis="bold">
-            {loyaltyData.tier.icon} {loyaltyData.tier.name} Member
-          </Text>
-          <Text>•</Text>
-          <Text emphasis="bold">
-            {loyaltyData.pointsBalance} points
-          </Text>
-        </InlineStack>
-        
-        <Text>View and redeem your loyalty rewards</Text>
-        
-        <Link to="/account/loyalty">
-          View Rewards
-        </Link>
-      </BlockStack>
-    </Banner>
     </BlockStack>
   );
 }

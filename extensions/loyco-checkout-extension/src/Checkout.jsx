@@ -2,14 +2,183 @@ import {
   reactExtension,
   Banner,
   Text,
+  BlockStack,
+  InlineStack,
+  Button,
+  Spinner,
+  useApi,
 } from '@shopify/ui-extensions-react/checkout';
+import { useState, useEffect } from 'react';
 
-export default reactExtension('purchase.checkout.block.render', () => <LoyaltyCheckoutExtension />);
+export default reactExtension('purchase.checkout.block.render', () => <CheckoutLoyaltyBlock />);
 
-function LoyaltyCheckoutExtension() {
+function CheckoutLoyaltyBlock() {
+  const { customer, shop } = useApi();
+  const [customerStatus, setCustomerStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [enrolling, setEnrolling] = useState(false);
+  const [error, setError] = useState(null);
+
+  console.log('🚨 LOYCO CHECKOUT: Extension function called');
+  console.log('Customer:', customer);
+  console.log('Shop:', shop);
+
+  // Fetch customer loyalty status
+  useEffect(() => {
+    const fetchCustomerStatus = async () => {
+      if (!customer?.id || !shop?.domain) {
+        console.log('Missing customer or shop data');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log('Fetching customer status for:', customer.id);
+        const url = `https://${shop.domain}/apps/loyco-rewards/api/customer/${customer.id}/status?shop=${shop.domain}&timestamp=${Date.now()}&signature=dummy`;
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Customer status response:', data);
+        setCustomerStatus(data);
+      } catch (err) {
+        console.error('Error fetching customer status:', err);
+        setError('Failed to load loyalty status');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomerStatus();
+  }, [customer?.id, shop?.domain]);
+
+  // Handle customer enrollment
+  const handleEnroll = async () => {
+    if (!customer?.id || !shop?.domain || enrolling) {
+      return;
+    }
+
+    setEnrolling(true);
+    setError(null);
+
+    try {
+      console.log('Enrolling customer:', customer.id);
+      const url = `https://${shop.domain}/apps/loyco-rewards/api/customer/enroll?shop=${shop.domain}&timestamp=${Date.now()}&signature=dummy`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shopifyCustomerId: customer.id,
+          email: customer.email,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          phone: customer.phone,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Enrollment response:', data);
+
+      if (data.success) {
+        // Refresh customer status
+        setCustomerStatus({
+          enrolled: true,
+          customer: data.customer,
+          program: data.program,
+          welcomeBonus: data.welcomeBonus,
+        });
+      } else {
+        throw new Error(data.error || 'Enrollment failed');
+      }
+    } catch (err) {
+      console.error('Error enrolling customer:', err);
+      setError(err.message || 'Failed to join loyalty program');
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <BlockStack spacing="base">
+        <Spinner size="small" />
+        <Text size="small">Loading loyalty information...</Text>
+      </BlockStack>
+    );
+  }
+
+  if (error) {
+    return (
+      <BlockStack spacing="base">
+        <Banner status="critical">
+          <Text>{error}</Text>
+        </Banner>
+      </BlockStack>
+    );
+  }
+
+  // Customer is not enrolled - show enrollment option
+  if (!customerStatus?.enrolled) {
+    return (
+      <BlockStack spacing="base">
+        <Banner status="info">
+          <BlockStack spacing="small">
+            <Text emphasis="bold">💝 Join {customerStatus?.program?.name || 'Our Loyalty Program'} and earn points on this order!</Text>
+            <Text>Earn {customerStatus?.program?.pointsName || 'points'} on every purchase and unlock exclusive rewards.</Text>
+            {customerStatus?.program?.welcomeBonus > 0 && (
+              <Text>Welcome bonus: {customerStatus.program.welcomeBonus} {customerStatus.program.pointsName}!</Text>
+            )}
+          </BlockStack>
+        </Banner>
+
+        <InlineStack spacing="base">
+          <Button
+            kind="primary"
+            onPress={handleEnroll}
+            loading={enrolling}
+            disabled={enrolling}
+          >
+            {enrolling ? 'Joining...' : 'Join & Earn Points'}
+          </Button>
+        </InlineStack>
+      </BlockStack>
+    );
+  }
+
+  // Customer is enrolled - show loyalty info
+  const { customer: loyaltyCustomer, program } = customerStatus;
+
   return (
-    <Banner status="critical">
-      <Text>🚨 LOYCO CHECKOUT EXTENSION TEST - If you see this, the extension is working!</Text>
-    </Banner>
+    <BlockStack spacing="base">
+      <Banner status="success">
+        <BlockStack spacing="small">
+          <Text emphasis="bold">🎉 You're earning {program?.pointsName} with {program?.name}!</Text>
+          <Text>Current balance: {loyaltyCustomer?.pointsBalance || 0} {program?.pointsName}</Text>
+        </BlockStack>
+      </Banner>
+
+      {customerStatus.welcomeBonus && (
+        <Banner status="success">
+          <Text>Welcome bonus awarded: {customerStatus.welcomeBonus.points} {program?.pointsName}!</Text>
+        </Banner>
+      )}
+    </BlockStack>
   );
 }
